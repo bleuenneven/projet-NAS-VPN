@@ -1,5 +1,5 @@
-from ipaddress import IPv6Address, IPv6Network
-from ipv6 import SubNetwork
+from ipaddress import IPv4Address, IPv4Network
+from ipv4 import SubNetwork
 
 
 class GlobalRouterIDCounter:
@@ -11,8 +11,8 @@ class GlobalRouterIDCounter:
         return temp
 
 class AS:
-    def __init__(self, ipv6_prefix: SubNetwork, AS_number: int, routers: list["Router"], internal_routing: str, connected_AS: list[tuple[int, str, list[IPv6Network]]], loopback_prefix: SubNetwork, counter:GlobalRouterIDCounter):
-        self.ipv6_prefix = ipv6_prefix
+    def __init__(self, ipv4_prefix: SubNetwork, AS_number: int, routers: list["Router"], internal_routing: str, connected_AS: list[tuple[int, str, list[IPv4Network]]], loopback_prefix: SubNetwork, counter:GlobalRouterIDCounter):
+        self.ipv4_prefix = ipv4_prefix
         self.AS_number = AS_number
         self.routers = routers
         self.internal_routing = internal_routing
@@ -57,4 +57,4 @@ class AS:
         
     
     def __str__(self):
-        return f"prefix:{self.ipv6_prefix}\n as_number:{self.AS_number}\n routers:{self.routers}\n internal_routing:{self.internal_routing}\n connected_AS:{self.connected_AS}"
+        return f"prefix:{self.ipv4_prefix}\n as_number:{self.AS_number}\n routers:{self.routers}\n internal_routing:{self.internal_routing}\n connected_AS:{self.connected_AS}"

@@ -2,7 +2,7 @@ import ipaddress
 import json
 
 from autonomous_system import AS, GlobalRouterIDCounter
-from ipv6 import SubNetwork
+from ipv4 import SubNetwork
 from router import Router
 from writer import get_final_config_string
 
@@ -40,10 +40,10 @@ def parse_intent_file(file_path: str) -> tuple[list[AS], list[Router]]:
         for autonomous in data[AS_LIST_NAME]:
             as_number = autonomous["AS_number"]
             routers = autonomous["routers"]
-            ip = SubNetwork(ipaddress.IPv6Network(autonomous["ipv6_prefix"]), len(routers))
+            ip = SubNetwork(ipaddress.IPv4Network(autonomous["ipv4_prefix"]), len(routers))
             internal_routing = autonomous["internal_routing"]
             connected_as = autonomous["connected_AS"]
-            loopback_prefix = SubNetwork(ipaddress.IPv6Network(autonomous["loopback_prefix"]), len(routers))
+            loopback_prefix = SubNetwork(ipaddress.IPv4Network(autonomous["loopback_prefix"]), len(routers))
             les_as.append(AS(ip, as_number, routers, internal_routing, connected_as, loopback_prefix, global_counter))
         les_routers = []
         for router in data[ROUTER_LIST_NAME]:
