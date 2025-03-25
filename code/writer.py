@@ -65,7 +65,10 @@ def get_final_config_string(AS: AS, router: "Router", mode: str):
 	route_maps = ""
 	community_lists = AS.full_community_lists
 	for autonomous in router.used_route_maps:
-		route_maps += AS.community_data[autonomous]["route_map_in"]
+		if AS.community_data[autonomous].get("route_map_in", False) != False:
+			route_maps += AS.community_data[autonomous]["route_map_in"]
+		else:
+			route_maps += AS.community_data[autonomous].get("vrf_def", [""]).pop()
 	route_maps += AS.global_route_map_out
 	return f"""!
 !
@@ -87,7 +90,6 @@ boot-end-marker
 no aaa new-model
 no ip icmp rate-limit unreachable
 ip cef
-!
 !
 !
 !
@@ -119,14 +121,15 @@ ip bgp-community new-format
 !
 !
 !
+{community_lists}
 !
 !
+{route_maps}
 !
 !
 interface {STANDARD_LOOPBACK_INTERFACE}
  no ip address
  negotiation auto
- ip enable
  ip address {router.loopback_address} 255.255.255.255
  {router.internal_routing_loopback_config}
 !
@@ -143,9 +146,7 @@ no ip http secure-server
 !
 {internal_routing}
 !
-{community_lists}
 !
-{route_maps}
 !
 !
 control-plane

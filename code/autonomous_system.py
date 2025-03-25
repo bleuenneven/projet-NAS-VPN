@@ -11,45 +11,69 @@ class GlobalRouterIDCounter:
         return temp
 
 class AS:
-    def __init__(self, ipv4_prefix: SubNetwork, AS_number: int, routers: list["Router"], internal_routing: str, connected_AS: list[tuple[int, str, list[IPv4Network]]], loopback_prefix: SubNetwork, counter:GlobalRouterIDCounter):
+    def __init__(self, ipv4_prefix: SubNetwork, AS_number: int, routers: list["Router"], internal_routing: str, connected_AS: list[tuple[int, str, list[IPv4Network], ]], loopback_prefix: SubNetwork, counter:GlobalRouterIDCounter):
         self.ipv4_prefix = ipv4_prefix
         self.AS_number = AS_number
         self.routers = routers
+        self.route_distinguishers = 1
         self.internal_routing = internal_routing
         self.connected_AS = connected_AS
-        self.full_community_lists = "".join([f"ip community-list standard AS{as_num} permit {as_num}:1000\n" for (as_num, _, _) in connected_AS])
+        self.full_community_lists = "".join([f"ip community-list standard AS{target[0]} permit {target[0]}:1000\n" for target in connected_AS])
         total_not_client = 0
         self.global_route_map_out = "route-map General-OUT deny 10\n"
-        for (as_num, state, list_of_transport) in connected_AS:
-            if state != "client":
-                self.global_route_map_out += f" match community AS{as_num}\n"
-                total_not_client += 1
+        for target in connected_AS:
+            if len(target) == 3:
+                (as_num, state, list_of_transport) = target
+                if state != "client":
+                    self.global_route_map_out += f" match community AS{as_num}\n"
+                    total_not_client += 1
         self.global_route_map_out += "!\n"
         if total_not_client > 0:
             self.global_route_map_out += "route-map General-OUT permit 20\n!\n"
         else:
             self.global_route_map_out = "route-map General-OUT permit 20\n!\n"
         self.community_data = {}
-        for (as_num, state, list_of_transport) in connected_AS:
-            if state == "peer":
-                self.community_data[as_num] = {
-                    "route_map_in":f"route-map Peer-AS{as_num} permit 10\n set local-preference 200\n set community {as_num}:1000\n!\n",
-                    "route_map_in_bgp_name":f"Peer-AS{as_num}",
-                    "community_list":f"ip community-list standard AS{as_num} permit {as_num}:1000\n"
-                }
-            elif state == "provider":
-                self.community_data[as_num] = {
-                    "route_map_in":f"route-map Provider-AS{as_num} permit 10\n set local-preference 100\n set community {as_num}:1000\n!\n",
-                    "route_map_in_bgp_name":f"Provider-AS{as_num}",
-                    "community_list":f"ip community-list standard AS{as_num} permit {as_num}:1000\n"
-                }
+        for target in connected_AS:
+            if len(target) == 3:
+                (as_num, state, list_of_transport) = target
+                if state == "peer":
+                    self.community_data[as_num] = {
+                        "route_map_in":f"route-map Peer-AS{as_num} permit 10\n set local-preference 200\n set community {as_num}:1000\n!\n",
+                        "route_map_in_bgp_name":f"Peer-AS{as_num}",
+                        "community_list":f"ip community-list standard AS{as_num} permit {as_num}:1000\n"
+                    }
+                elif state == "provider":
+                    self.community_data[as_num] = {
+                        "route_map_in":f"route-map Provider-AS{as_num} permit 10\n set local-preference 100\n set community {as_num}:1000\n!\n",
+                        "route_map_in_bgp_name":f"Provider-AS{as_num}",
+                        "community_list":f"ip community-list standard AS{as_num} permit {as_num}:1000\n"
+                    }
+                else:
+                    self.community_data[as_num] = {
+                        "route_map_in":f"route-map Client-AS{as_num} permit 10\n set local-preference 300\n set community {as_num}:1000\n!\n",
+                        "route_map_in_bgp_name":f"Client-AS{as_num}",
+                        "community_list":f"ip community-list standard AS{as_num} permit {as_num}:1000\n"
+                    }
             else:
-                self.community_data[as_num] = {
-                    "route_map_in":f"route-map Client-AS{as_num} permit 10\n set local-preference 300\n set community {as_num}:1000\n!\n",
-                    "route_map_in_bgp_name":f"Client-AS{as_num}",
-                    "community_list":f"ip community-list standard AS{as_num} permit {as_num}:1000\n"
-                }
-        self.connected_AS_dict = {as_num:(state, list_of_transport) for (as_num, state, list_of_transport) in connected_AS}
+                (as_num, state, list_of_transport, (client_id, am_client)) = target
+                if am_client:
+                    self.community_data[as_num] = {
+                        "VPN":True,
+                        "am_client":am_client
+                    }
+                else:
+                    vrf_defs = []
+                    for i in range(len(list_of_transport)):
+                        vrf_defs.append(f"vrf definition Client_{client_id}\n rd 100:{self.route_distinguishers}\n route-target export 100:{client_id * 10}\n route-target import 100:{client_id * 10}\n !\n address-family ipv4\n exit-address-family\n!\n")
+                        self.route_distinguishers += 1
+                    self.community_data[as_num] = {
+                        "VPN":True,
+                        "am_client":am_client,
+                        "nom_vrf":f"Client_{client_id}",
+                        "vrf_def":vrf_defs
+                    }
+                
+        self.connected_AS_dict = {target[0]:(target[1], target[2]) for target in connected_AS}
         self.hashset_routers = set(routers)
         self.loopback_prefix = loopback_prefix
         self.community = f"{self.AS_number}:1000"

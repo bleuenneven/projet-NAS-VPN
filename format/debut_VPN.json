@@ -2,33 +2,76 @@
     "Les_AS":[
         {
             "ipv4_prefix":"100.0.0.0/8",
-            "AS_number":111,
+            "AS_number":100,
             "routers":["R1", "R2", "R3", "R4"],
             "internal_routing":"OSPF",
-            "connected_AS":[],
+            "connected_AS":[
+                [200, "client", {"R4":"17.200.0.0/16", "R1":"17.201.0.0/16"}, [123, false]],
+                [300, "client", {"R4":"17.30.0.0/16", "R1":"17.31.0.0/16"}, [234, false]]
+            ],
             "loopback_prefix":"101.0.0.0/8"
+        },
+        {
+            "ipv4_prefix":"110.0.0.0/8",
+            "AS_number":200,
+            "routers":["R11", "R12"],
+            "internal_routing":"OSPF",
+            "connected_AS":[
+                [100, "provider", {"R11":"17.200.0.0/16", "R12":"17.201.0.0/16"}, [123, true]]
+            ],
+            "loopback_prefix":"111.0.0.0/8"
+        },
+        {
+            "ipv4_prefix":"120.0.0.0/8",
+            "AS_number":300,
+            "routers":["R21", "R22"],
+            "internal_routing":"OSPF",
+            "connected_AS":[
+                [100, "provider", {"R21":"17.30.0.0/16", "R22":"17.31.0.0/16"}, [123, true]]
+            ],
+            "loopback_prefix":"121.0.0.0/8"
         }
     ],
     "Les_routeurs":[
         {
             "hostname":"R1",
-            "links":[{"type":"Router", "hostname":"R2"}],
-            "AS_number":111
+            "links":[{"type":"Router", "hostname":"R2"}, {"type":"Router", "hostname":"R11"}, {"type":"Router", "hostname":"R21"}],
+            "AS_number":100
         },
         {
             "hostname":"R2",
             "links":[{"type":"Router", "hostname":"R1", "ospf_cost": 15}, {"type":"Router", "hostname":"R3", "interface":"GigabitEthernet3/0", "ospf_cost": 10}],
-            "AS_number":111
-        },
-        {
-            "hostname":"R4",
-            "links":[{"type":"Router", "hostname":"R3"}],
-            "AS_number":111
+            "AS_number":100
         },
         {
             "hostname":"R3",
             "links":[{"type":"Router", "hostname":"R4"}, {"type":"Router", "hostname":"R2"}],
-            "AS_number":111
+            "AS_number":100
+        },
+        {
+            "hostname":"R4",
+            "links":[{"type":"Router", "hostname":"R3"}, {"type":"Router", "hostname":"R12"}, {"type":"Router", "hostname":"R22"}],
+            "AS_number":100
+        },
+        {
+            "hostname":"R11",
+            "links":[{"type":"Router", "hostname":"R1"}],
+            "AS_number":200
+        },
+        {
+            "hostname":"R12",
+            "links":[{"type":"Router", "hostname":"R4"}],
+            "AS_number":200
+        },
+        {
+            "hostname":"R21",
+            "links":[{"type":"Router", "hostname":"R1"}],
+            "AS_number":300
+        },
+        {
+            "hostname":"R22",
+            "links":[{"type":"Router", "hostname":"R4"}],
+            "AS_number":300
         }
     ]
 }

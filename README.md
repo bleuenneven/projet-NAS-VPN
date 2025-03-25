@@ -13,6 +13,8 @@ repo du code du groupe 14 du projet GNS3 en 3TC
             - le numéro d'AS spécifié
             - la relation avec celui-ci ("peer", "provider" ou "client") (**doit être logique des 2 côtés, si peer d'un côté, peer de l'autre, si provider d'un côté, client de l'autre et inversement**)
             - un dictionnaire des préfixes ipv6 de liens à utiliser pour les points de connection avec cet AS partant d'un routeur donné (si on utilise le préfixe 2001:200:401::64 pour le lien entre l'AS 111 et 110 partant de R5 du côté 111, ce dictionnaire aura une entrée "R5":"2001:200:401::/64", , **doivent être uniques par lien entre AS**)
+            - RAJOUT DE NAS VPN : si il existe une relation de VPN entre les 2 AS, une liste de plusieurs éléments (des 2 côtés) :
+                - identifiant de client (entier positif)
         - "loopback_prefix":le préfixe IPv6 voulu pour allouer les adresses loopback, **doit être unique**
 - "Les_routeurs" :
     - contient une liste de dictionnaires d'informations complets pour tous les routeurs :
