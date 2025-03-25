@@ -294,9 +294,8 @@ class Router:
 router bgp {self.AS_number}
  bgp router-id {self.router_id}.{self.router_id}.{self.router_id}.{self.router_id}
  bgp log-neighbor-changes
- no bgp default ipv4-unicast
 {config_neighbors_ibgp}{config_neighbors_ebgp}
- address-family ipv4
+ address-family vpnv4
 {config_address_family}
  exit-address-family
 !
