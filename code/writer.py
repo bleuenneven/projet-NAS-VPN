@@ -96,7 +96,6 @@ ip cef
 !
 !
 no ip domain lookup
-ip unicast-routing
 ip cef
 !
 !
@@ -129,7 +128,6 @@ ip bgp-community new-format
 !
 interface {STANDARD_LOOPBACK_INTERFACE}
  no ip address
- negotiation auto
  ip address {router.loopback_address} 255.255.255.255
  {router.internal_routing_loopback_config}
 !
