@@ -11,7 +11,7 @@ class GlobalRouterIDCounter:
         return temp
 
 class AS:
-    def __init__(self, ipv4_prefix: SubNetwork, AS_number: int, routers: list["Router"], internal_routing: str, connected_AS: list[tuple[int, str, list[IPv4Network], ]], loopback_prefix: SubNetwork, counter:GlobalRouterIDCounter):
+    def __init__(self, ipv4_prefix: SubNetwork, AS_number: int, routers: list["Router"], internal_routing: str, connected_AS: list[tuple[int, str, dict[str, str], ]], loopback_prefix: SubNetwork, counter:GlobalRouterIDCounter):
         self.ipv4_prefix = ipv4_prefix
         self.AS_number = AS_number
         self.routers = routers
@@ -33,6 +33,7 @@ class AS:
         else:
             self.global_route_map_out = "route-map General-OUT permit 20\n!\n"
         self.community_data = {}
+        self.hashset_pe_routers = set()
         for target in connected_AS:
             if len(target) == 3:
                 (as_num, state, list_of_transport) = target
@@ -72,7 +73,8 @@ class AS:
                         "nom_vrf":f"Client_{client_id}",
                         "vrf_def":vrf_defs
                     }
-                
+            for router in list_of_transport.keys():
+                self.hashset_pe_routers.add(router)
         self.connected_AS_dict = {target[0]:(target[1], target[2]) for target in connected_AS}
         self.hashset_routers = set(routers)
         self.loopback_prefix = loopback_prefix

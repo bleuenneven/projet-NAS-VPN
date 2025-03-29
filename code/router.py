@@ -168,26 +168,29 @@ class Router:
             if mode == "cfg":
                 extra_config = "\n!\n"
                 am_vpn_provider = self.AS_number != all_routers[link["hostname"]].AS_number and my_as.community_data[all_routers[link["hostname"]].AS_number].get("VPN", False) and (not my_as.community_data[all_routers[link["hostname"]].AS_number]["am_client"])
+                mpls_extra = ""
+                if self.AS_number == all_routers[link["hostname"]].AS_number:
+                    mpls_extra = " mpls ip\n"
                 if my_as.internal_routing == "OSPF":
                     if not link.get("ospf_cost", False):
                         if am_vpn_provider:
-                            extra_config = f" vrf forwarding {my_as.community_data[all_routers[link["hostname"]].AS_number]["nom_vrf"]}\n ip ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT} area 0"
+                            extra_config = f" vrf forwarding {my_as.community_data[all_routers[link["hostname"]].AS_number]["nom_vrf"]}\n ip ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT} area 0\n"
                         else:
-                            extra_config = f"ip ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT} area 0"
+                            extra_config = f"ip ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT} area 0\n"
                         
                     else:
                         if am_vpn_provider:
-                            extra_config = f"vrf forwarding {my_as.community_data[all_routers[link["hostname"]].AS_number]["nom_vrf"]}\n ip ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT} area 0\n ip ospf cost {link["ospf_cost"]}"
+                            extra_config = f"vrf forwarding {my_as.community_data[all_routers[link["hostname"]].AS_number]["nom_vrf"]}\n ip ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT} area 0\n ip ospf cost {link["ospf_cost"]}\n"
                         else:
-                            extra_config = f"ip ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT} area 0\n ip ospf cost {link["ospf_cost"]}"
+                            extra_config = f"ip ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT} area 0\n ip ospf cost {link["ospf_cost"]}\n"
                 elif my_as.internal_routing == "RIP":
                     if am_vpn_provider:
-                        extra_config = f"vrf forwarding {my_as.community_data[all_routers[link["hostname"]].AS_number]["nom_vrf"]}\n ip rip {NOM_PROCESSUS_IGP_PAR_DEFAUT} enable"
+                        extra_config = f"vrf forwarding {my_as.community_data[all_routers[link["hostname"]].AS_number]["nom_vrf"]}\n ip rip {NOM_PROCESSUS_IGP_PAR_DEFAUT} enable\n"
                     else:
-                        extra_config = f"ip rip {NOM_PROCESSUS_IGP_PAR_DEFAUT} enable"
+                        extra_config = f"ip rip {NOM_PROCESSUS_IGP_PAR_DEFAUT} enable\n"
                 if am_vpn_provider:
                     self.vpn_neighbors.add(link["hostname"])
-                self.config_str_per_link[link["hostname"]] = f"interface {self.interface_per_link[link["hostname"]]}\n {extra_config}\n mpls ip\n ip address {str(ip_address)} {self.subnetworks_per_link[link["hostname"]].get_subnet_mask()}\n!\n "
+                self.config_str_per_link[link["hostname"]] = f"interface {self.interface_per_link[link["hostname"]]}\n {extra_config}{mpls_extra} ip address {str(ip_address)} {self.subnetworks_per_link[link["hostname"]].get_subnet_mask()}\n!\n "
             elif mode == "telnet":
                 extra_config = ""
                 if my_as.internal_routing == "OSPF":
@@ -235,7 +238,7 @@ class Router:
         """
         my_as = autonomous_systems[self.AS_number]
 
-        self.voisins_ibgp = my_as.hashset_routers.difference({self.hostname})
+        self.voisins_ibgp = my_as.hashset_routers.difference({self.hostname}.union())
         for link in self.links:
             if all_routers[link["hostname"]].AS_number != self.AS_number:
                 self.voisins_ebgp[link["hostname"]] = all_routers[link["hostname"]].AS_number
@@ -263,12 +266,16 @@ class Router:
             self.config_bgp += config_neighbors_ebgp
             self.config_bgp += config_address_family
         elif mode == "cfg":
-            config_address_family = ""
+            config_vpnv4_af = ""
+            config_ipv4_af = ""
             config_neighbors_ibgp = ""
             for voisin_ibgp in self.voisins_ibgp:
                 remote_ip = all_routers[voisin_ibgp].loopback_address
                 config_neighbors_ibgp += f"  neighbor {remote_ip} remote-as {self.AS_number}\n  neighbor {remote_ip} update-source {STANDARD_LOOPBACK_INTERFACE}\n"
-                config_address_family += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n"
+                #if self.hostname in my_as.hashset_pe_routers and voisin_ibgp in my_as.hashset_pe_routers:
+                config_vpnv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n"
+                #else:
+                config_ipv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n"
             config_neighbors_ebgp = ""
             for voisin_ebgp in self.voisins_ebgp:
                 if voisin_ebgp not in self.vpn_neighbors:
@@ -276,27 +283,34 @@ class Router:
                     remote_as = all_routers[voisin_ebgp].AS_number
                     config_neighbors_ebgp += f"  neighbor {remote_ip} remote-as {all_routers[voisin_ebgp].AS_number}\n"  # neighbor {remote_ip} update-source {STANDARD_LOOPBACK_INTERFACE}\n neighbor {remote_ip} ebgp-multihop 2\n"
                     if my_as.community_data[remote_as].get("route_map_in_bgp_name", False) != False:
-                        config_address_family += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n  neighbor {remote_ip} route-map {my_as.community_data[remote_as]["route_map_in_bgp_name"]} in\n"
+                        config_ipv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n  neighbor {remote_ip} route-map {my_as.community_data[remote_as]["route_map_in_bgp_name"]} in\n"
                     else:
-                        config_address_family += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n"
-                    
+                        config_ipv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n"
+                    if self.hostname in all_routers[voisin_ebgp].vpn_neighbors:
+                        config_ipv4_af += f"neighbor {remote_ip} allowas-in 5\n"
                     if my_as.connected_AS_dict[remote_as][0] != "client":
-                        config_address_family += f"  neighbor {remote_ip} route-map General-OUT out\n"
+                        config_ipv4_af += f"  neighbor {remote_ip} route-map General-OUT out\n"
                     self.used_route_maps.add(remote_as)
-            config_address_family += f"  network {self.loopback_address} mask 255.255.255.255\n"
+            config_ipv4_af += f"  network {self.loopback_address} mask 255.255.255.255\n"
+            config_vpnv4_af += f"  network {self.loopback_address} mask 255.255.255.255\n"
             vpn_address_families = ""
             for voisin_vpn in list(self.vpn_neighbors):
                 remote_ip = all_routers[voisin_vpn].ip_per_link[self.hostname]
                 remote_as = all_routers[voisin_vpn].AS_number
                 self.used_route_maps.add(remote_as)
                 vpn_address_families += f" address-family ipv4 vrf {autonomous_systems[self.AS_number].community_data[remote_as]["nom_vrf"]}\n  neighbor {remote_ip} remote-as {remote_as}\n  neighbor {remote_ip} activate\n exit-address-family\n!\n"
+            
             self.config_bgp = f"""
 router bgp {self.AS_number}
  bgp router-id {self.router_id}.{self.router_id}.{self.router_id}.{self.router_id}
  bgp log-neighbor-changes
 {config_neighbors_ibgp}{config_neighbors_ebgp}
  address-family vpnv4
-{config_address_family}
+{config_vpnv4_af}
+ exit-address-family
+!
+ address-family ipv4
+{config_ipv4_af}
  exit-address-family
 !
 {vpn_address_families}
