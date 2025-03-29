@@ -69,6 +69,7 @@ def get_final_config_string(AS: AS, router: "Router", mode: str):
 			route_maps += AS.community_data[autonomous]["route_map_in"]
 		else:
 			route_maps += AS.community_data[autonomous].get("vrf_def", [""]).pop()
+			route_maps += AS.community_data[autonomous].get("vpn_route_map", "")
 	route_maps += AS.global_route_map_out
 	return f"""!
 !

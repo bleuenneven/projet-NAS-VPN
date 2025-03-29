@@ -285,7 +285,7 @@ class Router:
                     if my_as.community_data[remote_as].get("route_map_in_bgp_name", False) != False:
                         config_ipv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n  neighbor {remote_ip} route-map {my_as.community_data[remote_as]["route_map_in_bgp_name"]} in\n"
                     else:
-                        config_ipv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n"
+                        config_ipv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n  neighbor {remote_ip} route-map {my_as.community_data[remote_as]["vpn_route_map_name"]} in\n"
                     if self.hostname in all_routers[voisin_ebgp].vpn_neighbors:
                         config_ipv4_af += f"neighbor {remote_ip} allowas-in 5\n"
                     if my_as.connected_AS_dict[remote_as][0] != "client":

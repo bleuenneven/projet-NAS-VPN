@@ -60,6 +60,8 @@ class AS:
                 if am_client:
                     self.community_data[as_num] = {
                         "VPN":True,
+                        "vpn_route_map":f"route-map VPN-AS{as_num} permit 10\n set local-preference 400\n set community {as_num}:1000\n!\n",
+                        "vpn_route_map_name":f"VPN-AS{as_num}",
                         "am_client":am_client
                     }
                 else:
