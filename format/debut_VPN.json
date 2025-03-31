@@ -48,67 +48,119 @@
         {
             "hostname":"R1",
             "links":[{"type":"Router", "hostname":"R2"}, {"type":"Router", "hostname":"R11"}, {"type":"Router", "hostname":"R21"}, {"type":"Router", "hostname":"R5"}],
-            "AS_number":100
+            "AS_number":100,
+            "position": {
+              "x": 95,
+              "y": 347
+            }
         },
         {
             "hostname":"R2",
             "links":[{"type":"Router", "hostname":"R1", "ospf_cost": 15}, {"type":"Router", "hostname":"R3", "interface":"GigabitEthernet3/0", "ospf_cost": 10}, {"type":"Router", "hostname":"R5"}],
-            "AS_number":100
+            "AS_number":100,
+            "position": {
+              "x": -59,
+              "y": 181
+            }
         },
         {
             "hostname":"R3",
             "links":[{"type":"Router", "hostname":"R4"}, {"type":"Router", "hostname":"R2"}, {"type":"Router", "hostname":"R5"}, {"type":"Router", "hostname":"R6"}],
-            "AS_number":100
+            "AS_number":100,
+            "position": {
+              "x": -40,
+              "y": -160
+            }
         },
         {
             "hostname":"R4",
             "links":[{"type":"Router", "hostname":"R3"}, {"type":"Router", "hostname":"R12"}, {"type":"Router", "hostname":"R22"}],
-            "AS_number":100
+            "AS_number":100,
+            "position": {
+              "x": -133,
+              "y": -154
+            }
         },
         {
             "hostname":"R5",
             "links":[{"type":"Router", "hostname":"R3"}, {"type":"Router", "hostname":"R2"}, {"type":"Router", "hostname":"R1"}],
-            "AS_number":100
+            "AS_number":100,
+            "position": {
+              "x": 200,
+              "y": 151
+            }
         },
         {
             "hostname":"R6",
             "links":[{"type":"Router", "hostname":"R3"}, {"type":"Router", "hostname":"R31"}],
-            "AS_number":100
+            "AS_number":100,
+            "position": {
+              "x": -44,
+              "y": -399
+            }
         },
         {
             "hostname":"R11",
             "links":[{"type":"Router", "hostname":"R1"}],
-            "AS_number":200
+            "AS_number":200,
+            "position": {
+              "x": 153,
+              "y": 550
+            }
         },
         {
             "hostname":"R12",
             "links":[{"type":"Router", "hostname":"R4"}, {"type":"Router", "hostname":"R13"}],
-            "AS_number":200
+            "AS_number":200,
+            "position": {
+              "x": -332,
+              "y": -227
+            }
         },
         {
             "hostname":"R13",
             "links":[{"type":"Router", "hostname":"R12"}],
-            "AS_number":200
+            "AS_number":200,
+            "position": {
+              "x": -407,
+              "y": -121
+            }
         },
         {
             "hostname":"R21",
             "links":[{"type":"Router", "hostname":"R1"}],
-            "AS_number":300
+            "AS_number":300,
+            "position": {
+              "x": -237,
+              "y": 520
+            }
         },
         {
             "hostname":"R22",
             "links":[{"type":"Router", "hostname":"R4"}],
-            "AS_number":300
+            "AS_number":300,
+            "position": {
+              "x": -222,
+              "y": -36
+            }
         },
         {
             "hostname":"R31",
             "links":[{"type":"Router", "hostname":"R6"}, {"type":"Router", "hostname":"R32"}],
-            "AS_number":400
+            "AS_number":400,
+            "position": {
+              "x": 52,
+              "y": -481
+            }
         },
         {
             "hostname":"R32",
             "links":[{"type":"Router", "hostname":"R31"}],
-            "AS_number":400
+            "AS_number":400,
+            "position": {
+              "x": 204,
+              "y": -531
+            }
         }
     ]
 }
