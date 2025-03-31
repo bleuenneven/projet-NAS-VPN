@@ -237,8 +237,10 @@ class Router:
         sorties : changement de plusieurs attributs de l'objet, mais surtout de config_bgp qui contient le string de configuration à la fin de l'exécution de la fonction
         """
         my_as = autonomous_systems[self.AS_number]
-
-        self.voisins_ibgp = my_as.hashset_routers.difference({self.hostname}.union())
+        if len(my_as.hashet_RRs) == 0 or self.hostname in my_as.hashet_RRs:
+            self.voisins_ibgp = my_as.hashset_routers.difference({self.hostname})
+        else:
+            self.voisins_ibgp = my_as.hashet_RRs
         for link in self.links:
             if all_routers[link["hostname"]].AS_number != self.AS_number:
                 self.voisins_ebgp[link["hostname"]] = all_routers[link["hostname"]].AS_number
@@ -273,9 +275,12 @@ class Router:
                 remote_ip = all_routers[voisin_ibgp].loopback_address
                 config_neighbors_ibgp += f"  neighbor {remote_ip} remote-as {self.AS_number}\n  neighbor {remote_ip} update-source {STANDARD_LOOPBACK_INTERFACE}\n"
                 #if self.hostname in my_as.hashset_pe_routers and voisin_ibgp in my_as.hashset_pe_routers:
-                config_vpnv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n"
-                #else:
-                config_ipv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n"
+                if len(my_as.hashet_RRs) == 0 or not self.hostname in my_as.hashet_RRs:
+                    config_vpnv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n"
+                    config_ipv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n"
+                else:
+                    config_vpnv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n neighbor {remote_ip} route-reflector-client\n"
+                    config_ipv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n neighbor {remote_ip} route-reflector-client\n"
             config_neighbors_ebgp = ""
             for voisin_ebgp in self.voisins_ebgp:
                 if voisin_ebgp not in self.vpn_neighbors:

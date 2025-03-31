@@ -11,7 +11,7 @@ class GlobalRouterIDCounter:
         return temp
 
 class AS:
-    def __init__(self, ipv4_prefix: SubNetwork, AS_number: int, routers: list["Router"], internal_routing: str, connected_AS: list[tuple[int, str, dict[str, str], ]], loopback_prefix: SubNetwork, counter:GlobalRouterIDCounter):
+    def __init__(self, ipv4_prefix: SubNetwork, AS_number: int, routers: list["Router"], internal_routing: str, connected_AS: list[tuple[int, str, dict[str, str], ]], loopback_prefix: SubNetwork, counter:GlobalRouterIDCounter, route_reflectors:list[str]):
         self.ipv4_prefix = ipv4_prefix
         self.AS_number = AS_number
         self.routers = routers
@@ -82,6 +82,8 @@ class AS:
         self.loopback_prefix = loopback_prefix
         self.community = f"{self.AS_number}:1000"
         self.global_router_counter = counter
+        self.hashet_RRs = set(route_reflectors)
+        self.route_reflectors = route_reflectors
         
     
     def __str__(self):
