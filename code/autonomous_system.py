@@ -34,6 +34,11 @@ class AS:
             self.global_route_map_out = "route-map General-OUT permit 20\n!\n"
         self.community_data = {}
         self.hashset_pe_routers = set()
+        vpn_datas_per_client = {}
+        for target in connected_AS:
+            if len(target) == 4 and not target[3]["am_client"]:
+                vpn_datas_per_client[target[3]["client_id"]] = target[3]
+
         for target in connected_AS:
             if len(target) == 3:
                 (as_num, state, list_of_transport) = target
@@ -56,7 +61,9 @@ class AS:
                         "community_list":f"ip community-list standard AS{as_num} permit {as_num}:1000\n"
                     }
             else:
-                (as_num, state, list_of_transport, (client_id, am_client)) = target
+                (as_num, state, list_of_transport, vpn_data) = target
+                am_client = vpn_data["am_client"]
+                client_id = vpn_data["client_id"]
                 if am_client:
                     self.community_data[as_num] = {
                         "VPN":True,
@@ -65,9 +72,13 @@ class AS:
                         "am_client":am_client
                     }
                 else:
+                    imports = ""
+                    for accept in vpn_data["accept_from"]:
+                        if vpn_data["client_id"] in vpn_datas_per_client[accept]["share_with"]:
+                            imports += f" route-target import 100:{accept}\n"
                     vrf_defs = []
                     for i in range(len(list_of_transport)):
-                        vrf_defs.append(f"vrf definition Client_{client_id}\n rd 100:{self.route_distinguishers}\n route-target export 100:{client_id * 10}\n route-target import 100:{client_id * 10}\n !\n address-family ipv4\n exit-address-family\n!\n")
+                        vrf_defs.append(f"vrf definition Client_{client_id}\n rd 100:{self.route_distinguishers}\n route-target export 100:{client_id}\n{imports} route-target import 100:{client_id}\n !\n address-family ipv4\n exit-address-family\n!\n")
                         self.route_distinguishers += 1
                     self.community_data[as_num] = {
                         "VPN":True,

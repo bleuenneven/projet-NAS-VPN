@@ -45,6 +45,22 @@ class Router:
         input : self (méthode), dictionnaire numéro_d'AS:AS, dictionnaire nom_des_routeurs:Router
         output : rien, modification de self.is_pe
         """
+    
+    def compute_connex_neighborhood(self, all_routers:dict[str, "Router"]):
+        """
+        Calcule le voisinnage connexe du routeur, c'est à dire tous les autres routeurs de son AS qui doivent être en iBGP
+
+        entrées : self (méthode), dictionnaire nom_des_routeurs:Router
+        sorties : modification de l'attribut self.connex_neighborhood
+        """
+        self.connex_neighborhood = set()
+        self.routers_to_test = [self.hostname]
+        while len(self.routers_to_test) > 0:
+            router = all_routers[self.routers_to_test.pop(0)]
+            for link in router.links:
+                if router.AS_number == all_routers[link["hostname"]].AS_number and not link["hostname"] in self.connex_neighborhood:
+                    self.connex_neighborhood.add(link["hostname"])
+                    self.routers_to_test.append(link["hostname"])
 
     def cleanup_used_interfaces(self, autonomous_systems: dict[int, AS], all_routers: dict[str, "Router"],
                                 connector: Connector):
@@ -54,6 +70,7 @@ class Router:
         entrées : self (méthode), dictionnaire numéro_d'AS:AS, dictionnaire nom_des_routeurs:Router et Connector au projet GNS3 local
         sorties : changement de self.available_interfaces
         """
+        self.compute_connex_neighborhood(all_routers)
         for link in self.links:
             if link.get("interface", False):
                 interface_to_remove = link["interface"]
@@ -238,9 +255,9 @@ class Router:
         """
         my_as = autonomous_systems[self.AS_number]
         if len(my_as.hashet_RRs) == 0 or self.hostname in my_as.hashet_RRs:
-            self.voisins_ibgp = my_as.hashset_routers.difference({self.hostname})
+            self.voisins_ibgp = my_as.hashset_routers.difference({self.hostname}).intersection(self.connex_neighborhood)
         else:
-            self.voisins_ibgp = my_as.hashet_RRs
+            self.voisins_ibgp = my_as.hashet_RRs.intersection(self.connex_neighborhood)
         for link in self.links:
             if all_routers[link["hostname"]].AS_number != self.AS_number:
                 self.voisins_ebgp[link["hostname"]] = all_routers[link["hostname"]].AS_number

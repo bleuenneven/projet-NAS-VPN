@@ -3,22 +3,23 @@
         {
             "ipv4_prefix":"100.0.0.0/8",
             "AS_number":100,
-            "routers":["R1", "R2", "R3", "R4", "R5"],
+            "routers":["R1", "R2", "R3", "R4", "R5", "R6"],
             "route_reflectors":["R2", "R5"],
             "internal_routing":"OSPF",
             "connected_AS":[
-                [200, "client", {"R4":"17.200.0.0/16", "R1":"17.201.0.0/16"}, [123, false]],
-                [300, "client", {"R4":"17.30.0.0/16", "R1":"17.31.0.0/16"}, [234, false]]
+                [200, "client", {"R4":"17.200.0.0/16", "R1":"17.201.0.0/16"}, {"client_id":123, "am_client":false, "accept_from":[345], "share_with":[345]}],
+                [300, "client", {"R4":"17.30.0.0/16", "R1":"17.31.0.0/16"}, {"client_id":234, "am_client":false, "accept_from":[345], "share_with":[345]}],
+                [400, "client", {"R6":"17.100.0.0/16"}, {"client_id":345, "am_client":false, "accept_from":[123, 234], "share_with":[123, 234]}]
             ],
             "loopback_prefix":"101.0.0.0/8"
         },
         {
             "ipv4_prefix":"110.0.0.0/8",
             "AS_number":200,
-            "routers":["R11", "R12"],
+            "routers":["R11", "R12", "R13"],
             "internal_routing":"OSPF",
             "connected_AS":[
-                [100, "provider", {"R11":"17.200.0.0/16", "R12":"17.201.0.0/16"}, [123, true]]
+                [100, "provider", {"R11":"17.200.0.0/16", "R12":"17.201.0.0/16"}, {"client_id":123, "am_client":true}]
             ],
             "loopback_prefix":"111.0.0.0/8"
         },
@@ -28,9 +29,19 @@
             "routers":["R21", "R22"],
             "internal_routing":"OSPF",
             "connected_AS":[
-                [100, "provider", {"R21":"17.30.0.0/16", "R22":"17.31.0.0/16"}, [123, true]]
+                [100, "provider", {"R21":"17.30.0.0/16", "R22":"17.31.0.0/16"}, {"client_id":234, "am_client":true}]
             ],
             "loopback_prefix":"121.0.0.0/8"
+        },
+        {
+            "ipv4_prefix":"130.0.0.0/8",
+            "AS_number":400,
+            "routers":["R31", "R32"],
+            "internal_routing":"OSPF",
+            "connected_AS":[
+                [100, "provider", {"R31":"17.100.0.0/16"}, {"client_id":345, "am_client":true}]
+            ],
+            "loopback_prefix":"131.0.0.0/8"
         }
     ],
     "Les_routeurs":[
@@ -46,7 +57,7 @@
         },
         {
             "hostname":"R3",
-            "links":[{"type":"Router", "hostname":"R4"}, {"type":"Router", "hostname":"R2"}, {"type":"Router", "hostname":"R5"}],
+            "links":[{"type":"Router", "hostname":"R4"}, {"type":"Router", "hostname":"R2"}, {"type":"Router", "hostname":"R5"}, {"type":"Router", "hostname":"R6"}],
             "AS_number":100
         },
         {
@@ -60,13 +71,23 @@
             "AS_number":100
         },
         {
+            "hostname":"R6",
+            "links":[{"type":"Router", "hostname":"R3"}, {"type":"Router", "hostname":"R31"}],
+            "AS_number":100
+        },
+        {
             "hostname":"R11",
             "links":[{"type":"Router", "hostname":"R1"}],
             "AS_number":200
         },
         {
             "hostname":"R12",
-            "links":[{"type":"Router", "hostname":"R4"}],
+            "links":[{"type":"Router", "hostname":"R4"}, {"type":"Router", "hostname":"R13"}],
+            "AS_number":200
+        },
+        {
+            "hostname":"R13",
+            "links":[{"type":"Router", "hostname":"R12"}],
             "AS_number":200
         },
         {
@@ -78,6 +99,16 @@
             "hostname":"R22",
             "links":[{"type":"Router", "hostname":"R4"}],
             "AS_number":300
+        },
+        {
+            "hostname":"R31",
+            "links":[{"type":"Router", "hostname":"R6"}, {"type":"Router", "hostname":"R32"}],
+            "AS_number":400
+        },
+        {
+            "hostname":"R32",
+            "links":[{"type":"Router", "hostname":"R31"}],
+            "AS_number":400
         }
     ]
 }
