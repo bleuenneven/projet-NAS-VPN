@@ -189,8 +189,12 @@ def get_all_telnet_commands(AS:AS, router:"Router"):
 	bgp_setup = router.config_bgp.split("\n")
 	loopback_setup = router.internal_routing_loopback_config.split("\n") + ["exit"]
 	for autonomous in router.used_route_maps:
-		route_maps_setup += AS.community_data[autonomous]["route_map_in"].split("\n")
-		route_maps_setup += ["exit"]
+		if AS.community_data[autonomous].get("route_map_in", False) != False:
+			route_maps_setup += AS.community_data[autonomous]["route_map_in"].split("\n")
+			route_maps_setup += ["exit"]
+		else:
+			route_maps_setup += AS.community_data[autonomous].get("vrf_def", [""]).pop().split("\n")
+			route_maps_setup += AS.community_data[autonomous].get("vpn_route_map", "").split("\n")
 		
 	interface_configs = []
 	for interface in router.config_str_per_link.values():
