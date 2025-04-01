@@ -301,7 +301,7 @@ class Router:
                         if my_as.connected_AS_dict[remote_as][0] != "client":
                             config_ipv4_af += f"neighbor {remote_ip} route-map General-OUT out\n"
                     else:
-                        config_ipv4_af += f"neighbor {remote_ip} activate\nneighbor {remote_ip} send-community both\nneighbor {remote_ip} route-map {my_as.community_data[remote_as]["vpn_route_map_name"]} in\n"
+                        config_ipv4_af += f"neighbor {remote_ip} activate\nneighbor {remote_ip} send-community both\n"
                     if self.hostname in all_routers[voisin_ebgp].vpn_neighbors:
                         config_ipv4_af += f"neighbor {remote_ip} allowas-in 5\n"
                         if (self.hostname, voisin_ebgp) in autonomous_systems[remote_as].vpn_te_route_maps.keys():

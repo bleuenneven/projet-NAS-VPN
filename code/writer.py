@@ -54,7 +54,7 @@ def get_final_config_string(AS: AS, router: "Router", mode: str, all_as:dict[int
 	"""
 	if mode == "telnet":
 		# todo : telnet command
-		return get_all_telnet_commands(AS, router)
+		return get_all_telnet_commands(AS, router, all_as)
 	if AS.internal_routing == "OSPF":
 		internal_routing = get_ospf_config_string(AS, router)
 	else:
@@ -181,7 +181,7 @@ end
 """
 
 
-def get_all_telnet_commands(AS:AS, router:"Router"):
+def get_all_telnet_commands(AS:AS, router:"Router", all_as:dict[int, AS]):
 	"""
 	Génère et renvoie une liste de commandes telnet à partir d'un AS et d'un routeur que l'on SUPPOSE avoir été configuré en mode "telnet"
 	
@@ -207,11 +207,14 @@ def get_all_telnet_commands(AS:AS, router:"Router"):
 		else:
 			route_maps_setup += AS.community_data[autonomous].get("vrf_def", [""]).pop().split("\n")
 			route_maps_setup += AS.community_data[autonomous].get("vpn_route_map", "").split("\n")
-			if AS.vpn_te_route_maps != {}:
-				for data in AS.vpn_te_route_maps:
-					if len(data) == 2:
+			if all_as[autonomous].vpn_te_route_maps != {}:
+				for ((r1, r2),data) in all_as[autonomous].vpn_te_route_maps.items():
+					if r1 == router.hostname:
+
 						route_maps_setup += data["route_map_ce_out"].split("\n")
-					else:
+			else:
+				for ((r1, r2),data) in AS.vpn_te_route_maps.items():
+					if r1 == router.hostname:
 						route_maps_setup += data["route_map_pe_in"].split("\n")
 						community_list_setup += data["community_list"].split("\n")
 		
