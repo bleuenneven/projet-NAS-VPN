@@ -45,7 +45,7 @@ def get_rip_config_string(AS, router):
     return rip_config_string
 
 
-def get_final_config_string(AS: AS, router: "Router", mode: str):
+def get_final_config_string(AS: AS, router: "Router", mode: str, all_as:dict[int, AS]):
 	"""
 	Génère le string de configuration "final" pour un router, à mettre à la place de sa configuration interne
 
@@ -70,6 +70,18 @@ def get_final_config_string(AS: AS, router: "Router", mode: str):
 		else:
 			route_maps += AS.community_data[autonomous].get("vrf_def", [""]).pop()
 			route_maps += AS.community_data[autonomous].get("vpn_route_map", "")
+
+			if all_as[autonomous].vpn_te_route_maps != {}:
+				for ((r1, r2),data) in all_as[autonomous].vpn_te_route_maps.items():
+					if r1 == router.hostname:
+
+						route_maps += data["route_map_ce_out"]
+			else:
+				for ((r1, r2),data) in AS.vpn_te_route_maps.items():
+					if r1 == router.hostname:
+						route_maps += data["route_map_pe_in"]
+						community_lists += data["community_list"]
+
 	route_maps += AS.global_route_map_out
 	return f"""!
 !
@@ -195,6 +207,13 @@ def get_all_telnet_commands(AS:AS, router:"Router"):
 		else:
 			route_maps_setup += AS.community_data[autonomous].get("vrf_def", [""]).pop().split("\n")
 			route_maps_setup += AS.community_data[autonomous].get("vpn_route_map", "").split("\n")
+			if AS.vpn_te_route_maps != {}:
+				for data in AS.vpn_te_route_maps:
+					if len(data) == 2:
+						route_maps_setup += data["route_map_ce_out"].split("\n")
+					else:
+						route_maps_setup += data["route_map_pe_in"].split("\n")
+						community_list_setup += data["community_list"].split("\n")
 		
 	interface_configs = []
 	for interface in router.config_str_per_link.values():

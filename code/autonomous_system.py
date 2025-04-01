@@ -16,9 +16,10 @@ class AS:
         self.AS_number = AS_number
         self.routers = routers
         self.route_distinguishers = 1
+        self.allocated_vpn_communities = 0
         self.internal_routing = internal_routing
         self.connected_AS = connected_AS
-        self.full_community_lists = "".join([f"ip community-list standard AS{target[0]} permit {target[0]}:1000\n" for target in connected_AS])
+        self.full_community_lists = "".join([f"ip community-list standard AS{target[0]} permit 1000:{target[0]}\n" for target in connected_AS])
         total_not_client = 0
         self.global_route_map_out = "route-map General-OUT deny 10\n"
         for target in connected_AS:
@@ -35,6 +36,7 @@ class AS:
         self.community_data = {}
         self.hashset_pe_routers = set()
         vpn_datas_per_client = {}
+        self.vpn_te_route_maps = {}
         for target in connected_AS:
             if len(target) == 4 and not target[3]["am_client"]:
                 vpn_datas_per_client[target[3]["client_id"]] = target[3]
@@ -44,21 +46,21 @@ class AS:
                 (as_num, state, list_of_transport) = target
                 if state == "peer":
                     self.community_data[as_num] = {
-                        "route_map_in":f"route-map Peer-AS{as_num} permit 10\n set local-preference 200\n set community {as_num}:1000\n!\n",
+                        "route_map_in":f"route-map Peer-AS{as_num} permit 10\n set local-preference 200\n set community 1000:{as_num}\n!\n",
                         "route_map_in_bgp_name":f"Peer-AS{as_num}",
-                        "community_list":f"ip community-list standard AS{as_num} permit {as_num}:1000\n"
+                        "community_list":f"ip community-list standard AS{as_num} permit 1000:{as_num}\n"
                     }
                 elif state == "provider":
                     self.community_data[as_num] = {
-                        "route_map_in":f"route-map Provider-AS{as_num} permit 10\n set local-preference 100\n set community {as_num}:1000\n!\n",
+                        "route_map_in":f"route-map Provider-AS{as_num} permit 10\n set local-preference 100\n set community 1000:{as_num}\n!\n",
                         "route_map_in_bgp_name":f"Provider-AS{as_num}",
-                        "community_list":f"ip community-list standard AS{as_num} permit {as_num}:1000\n"
+                        "community_list":f"ip community-list standard AS{as_num} permit 1000:{as_num}\n"
                     }
                 else:
                     self.community_data[as_num] = {
-                        "route_map_in":f"route-map Client-AS{as_num} permit 10\n set local-preference 300\n set community {as_num}:1000\n!\n",
+                        "route_map_in":f"route-map Client-AS{as_num} permit 10\n set local-preference 300\n set community 1000:{as_num}\n!\n",
                         "route_map_in_bgp_name":f"Client-AS{as_num}",
-                        "community_list":f"ip community-list standard AS{as_num} permit {as_num}:1000\n"
+                        "community_list":f"ip community-list standard AS{as_num} permit 1000:{as_num}\n"
                     }
             else:
                 (as_num, state, list_of_transport, vpn_data) = target
@@ -67,12 +69,26 @@ class AS:
                 if am_client:
                     self.community_data[as_num] = {
                         "VPN":True,
-                        "vpn_route_map":f"route-map VPN-AS{as_num} permit 10\n set local-preference 400\n set community {as_num}:1000\n!\n",
+                        "vpn_route_map":f"route-map VPN-AS{as_num} permit 10\n set local-preference 400\n set community 1000:{as_num}\n!\n",
                         "vpn_route_map_name":f"VPN-AS{as_num}",
                         "am_client":am_client
                     }
                 else:
                     imports = ""
+                    for (my_router, their_router) in vpn_data.get("preferred_links", []):
+                        self.allocated_vpn_communities += 1
+                        allocated = self.allocated_vpn_communities
+                        self.vpn_te_route_maps[(my_router, their_router)] = {
+                            "community_list":f"ip community-list standard VPN{client_id}-P{allocated} permit 200:{allocated}\n",
+                            "route_map_pe_in":f"route-map VPN{client_id}-P{allocated}-RM permit 10\n set local-preference 400\n match community VPN{client_id}-P{allocated}\n!\n",
+                            "RM_name":f"VPN{client_id}-P{allocated}-RM"
+                        }
+                        
+                        self.vpn_te_route_maps[(their_router, my_router)] = {
+                            "route_map_ce_out":f"route-map VPN{client_id}-P{allocated}-RM permit 10\n set community 200:{allocated}\n!\n",
+                            "RM_name":f"VPN{client_id}-P{allocated}-RM"
+                        }
+
                     for accept in vpn_data["accept_from"]:
                         if vpn_data["client_id"] in vpn_datas_per_client[accept]["share_with"]:
                             imports += f" route-target import 100:{accept}\n"

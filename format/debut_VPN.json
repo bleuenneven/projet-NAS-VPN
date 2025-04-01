@@ -7,9 +7,15 @@
             "route_reflectors":["R2", "R5"],
             "internal_routing":"OSPF",
             "connected_AS":[
-                [200, "client", {"R4":"17.200.0.0/16", "R1":"17.201.0.0/16"}, {"client_id":123, "am_client":false, "accept_from":[345], "share_with":[345]}],
-                [300, "client", {"R4":"17.30.0.0/16", "R1":"17.31.0.0/16"}, {"client_id":234, "am_client":false, "accept_from":[345], "share_with":[345]}],
-                [400, "client", {"R6":"17.100.0.0/16"}, {"client_id":345, "am_client":false, "accept_from":[123, 234], "share_with":[123, 234]}]
+                [200, "client", {"R4":"17.200.0.0/16", "R1":"17.201.0.0/16", "R6":"17.203.0.0/16"},
+                  {"client_id":123, "am_client":false, "accept_from":[345], "share_with":[345], "preferred_links":[["R6", "R12"]]}
+                ],
+                [300, "client", {"R4":"17.30.0.0/16", "R1":"17.31.0.0/16"},
+                  {"client_id":234, "am_client":false, "accept_from":[345], "share_with":[345]}
+                ],
+                [400, "client", {"R6":"17.100.0.0/16"},
+                  {"client_id":345, "am_client":false, "accept_from":[123, 234], "share_with":[123, 234]}
+                ]
             ],
             "loopback_prefix":"101.0.0.0/8"
         },
@@ -19,7 +25,7 @@
             "routers":["R11", "R12", "R13"],
             "internal_routing":"OSPF",
             "connected_AS":[
-                [100, "provider", {"R11":"17.200.0.0/16", "R12":"17.201.0.0/16"}, {"client_id":123, "am_client":true}]
+                [100, "provider", {"R11":"17.200.0.0/16", "R12":"17.201.0.0/16", "R13":"17.202.0.0/16"}, {"client_id":123, "am_client":true}]
             ],
             "loopback_prefix":"111.0.0.0/8"
         },
@@ -74,7 +80,7 @@
         },
         {
             "hostname":"R4",
-            "links":[{"type":"Router", "hostname":"R3"}, {"type":"Router", "hostname":"R12"}, {"type":"Router", "hostname":"R22"}],
+            "links":[{"type":"Router", "hostname":"R3"}, {"type":"Router", "hostname":"R12"}, {"type":"Router", "hostname":"R22"}, {"type":"Router", "hostname":"R13"}],
             "AS_number":100,
             "position": {
               "x": -133,
@@ -92,7 +98,7 @@
         },
         {
             "hostname":"R6",
-            "links":[{"type":"Router", "hostname":"R3"}, {"type":"Router", "hostname":"R31"}],
+            "links":[{"type":"Router", "hostname":"R3"}, {"type":"Router", "hostname":"R31"}, {"type":"Router", "hostname":"R12"}],
             "AS_number":100,
             "position": {
               "x": -44,
@@ -110,7 +116,7 @@
         },
         {
             "hostname":"R12",
-            "links":[{"type":"Router", "hostname":"R4"}, {"type":"Router", "hostname":"R13"}],
+            "links":[{"type":"Router", "hostname":"R4"}, {"type":"Router", "hostname":"R13"}, {"type":"Router", "hostname":"R6"}],
             "AS_number":200,
             "position": {
               "x": -332,
@@ -119,7 +125,7 @@
         },
         {
             "hostname":"R13",
-            "links":[{"type":"Router", "hostname":"R12"}],
+            "links":[{"type":"Router", "hostname":"R12"}, {"type":"Router", "hostname":"R4"}],
             "AS_number":200,
             "position": {
               "x": -407,

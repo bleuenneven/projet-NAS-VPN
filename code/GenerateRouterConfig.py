@@ -91,7 +91,7 @@ def main(mode: str, file: str) -> None:
 		router.set_bgp_config_data(as_dico, router_dico, mode)
 
 		try:
-			config_data[router.hostname] = writer.get_final_config_string(as_dico[router.AS_number], router, mode)
+			config_data[router.hostname] = writer.get_final_config_string(as_dico[router.AS_number], router, mode, as_dico)
 
 			if mode == 'telnet':
 				connector.start_node(router.hostname)

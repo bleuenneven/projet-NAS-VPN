@@ -34,7 +34,6 @@ class Router:
         self.is_pe = False
         self.vpn_neighbors = set()
 
-
     def __str__(self):
         return f"hostname:{self.hostname}\n links:{self.links}\n as_number:{self.AS_number}"
     
@@ -299,13 +298,16 @@ class Router:
                     config_neighbors_ebgp += f"neighbor {remote_ip} remote-as {all_routers[voisin_ebgp].AS_number}\n"  # neighbor {remote_ip} update-source {STANDARD_LOOPBACK_INTERFACE}\n neighbor {remote_ip} ebgp-multihop 2\n"
                     if my_as.community_data[remote_as].get("route_map_in_bgp_name", False) != False:
                         config_ipv4_af += f"neighbor {remote_ip} activate\nneighbor {remote_ip} send-community both\nneighbor {remote_ip} route-map {my_as.community_data[remote_as]["route_map_in_bgp_name"]} in\n"
+                        if my_as.connected_AS_dict[remote_as][0] != "client":
+                            config_ipv4_af += f"neighbor {remote_ip} route-map General-OUT out\n"
                     else:
                         config_ipv4_af += f"neighbor {remote_ip} activate\nneighbor {remote_ip} send-community both\nneighbor {remote_ip} route-map {my_as.community_data[remote_as]["vpn_route_map_name"]} in\n"
                     if self.hostname in all_routers[voisin_ebgp].vpn_neighbors:
                         config_ipv4_af += f"neighbor {remote_ip} allowas-in 5\n"
-                    if my_as.connected_AS_dict[remote_as][0] != "client":
-                        config_ipv4_af += f"neighbor {remote_ip} route-map General-OUT out\n"
+                        if (self.hostname, voisin_ebgp) in autonomous_systems[remote_as].vpn_te_route_maps.keys():
+                            config_ipv4_af += f"neighbor {remote_ip} route-map {autonomous_systems[remote_as].vpn_te_route_maps[(self.hostname, voisin_ebgp)]["RM_name"]} out\n"
                     self.used_route_maps.add(remote_as)
+
             config_ipv4_af += f"network {self.loopback_address} mask 255.255.255.255\nexit\n"
             config_vpnv4_af += "exit\n"
             self.config_bgp += config_neighbors_ibgp
@@ -317,7 +319,10 @@ class Router:
                 remote_ip = all_routers[voisin_vpn].ip_per_link[self.hostname]
                 remote_as = all_routers[voisin_vpn].AS_number
                 self.used_route_maps.add(remote_as)
-                vpn_address_families += f"address-family ipv4 vrf {autonomous_systems[self.AS_number].community_data[remote_as]["nom_vrf"]}\nneighbor {remote_ip} remote-as {remote_as}\nneighbor {remote_ip} activate\n exit\n"
+                extra_route_mapping = ""
+                if my_as.vpn_te_route_maps.get((self.hostname, voisin_vpn), False) != False:
+                    extra_route_mapping = f"  neighbor {remote_ip} route-map {my_as.vpn_te_route_maps[(self.hostname, voisin_vpn)]["RM_name"]} in\n"
+                vpn_address_families += f"address-family ipv4 vrf {autonomous_systems[self.AS_number].community_data[remote_as]["nom_vrf"]}\nneighbor {remote_ip} remote-as {remote_as}\nneighbor {remote_ip} activate\n{extra_route_mapping} exit\n"
             self.config_bgp += vpn_address_families
             self.config_bgp += "exit\nexit\n"
             
@@ -343,12 +348,15 @@ class Router:
                     config_neighbors_ebgp += f"  neighbor {remote_ip} remote-as {all_routers[voisin_ebgp].AS_number}\n"  # neighbor {remote_ip} update-source {STANDARD_LOOPBACK_INTERFACE}\n neighbor {remote_ip} ebgp-multihop 2\n"
                     if my_as.community_data[remote_as].get("route_map_in_bgp_name", False) != False:
                         config_ipv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n  neighbor {remote_ip} route-map {my_as.community_data[remote_as]["route_map_in_bgp_name"]} in\n"
+                        if my_as.connected_AS_dict[remote_as][0] != "client":
+                            config_ipv4_af += f"  neighbor {remote_ip} route-map General-OUT out\n"
                     else:
-                        config_ipv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n  neighbor {remote_ip} route-map {my_as.community_data[remote_as]["vpn_route_map_name"]} in\n"
+                        config_ipv4_af += f"  neighbor {remote_ip} activate\n  neighbor {remote_ip} send-community both\n"
                     if self.hostname in all_routers[voisin_ebgp].vpn_neighbors:
-                        config_ipv4_af += f"neighbor {remote_ip} allowas-in 5\n"
-                    if my_as.connected_AS_dict[remote_as][0] != "client":
-                        config_ipv4_af += f"  neighbor {remote_ip} route-map General-OUT out\n"
+                        config_ipv4_af += f"  neighbor {remote_ip} allowas-in 5\n"
+                        if (self.hostname, voisin_ebgp) in autonomous_systems[remote_as].vpn_te_route_maps.keys():
+                            config_ipv4_af += f"  neighbor {remote_ip} route-map {autonomous_systems[remote_as].vpn_te_route_maps[(self.hostname, voisin_ebgp)]["RM_name"]} out\n"
+                    
                     self.used_route_maps.add(remote_as)
             config_ipv4_af += f"  network {self.loopback_address} mask 255.255.255.255\n"
             vpn_address_families = ""
@@ -356,7 +364,10 @@ class Router:
                 remote_ip = all_routers[voisin_vpn].ip_per_link[self.hostname]
                 remote_as = all_routers[voisin_vpn].AS_number
                 self.used_route_maps.add(remote_as)
-                vpn_address_families += f" address-family ipv4 vrf {autonomous_systems[self.AS_number].community_data[remote_as]["nom_vrf"]}\n  neighbor {remote_ip} remote-as {remote_as}\n  neighbor {remote_ip} activate\n exit-address-family\n!\n"
+                extra_route_mapping = ""
+                if my_as.vpn_te_route_maps.get((self.hostname, voisin_vpn), False) != False:
+                    extra_route_mapping = f"  neighbor {remote_ip} route-map {my_as.vpn_te_route_maps[(self.hostname, voisin_vpn)]["RM_name"]} in\n"
+                vpn_address_families += f" address-family ipv4 vrf {autonomous_systems[self.AS_number].community_data[remote_as]["nom_vrf"]}\n  neighbor {remote_ip} remote-as {remote_as}\n  neighbor {remote_ip} activate \n{extra_route_mapping} exit-address-family\n!\n"
             
             self.config_bgp = f"""
 router bgp {self.AS_number}
