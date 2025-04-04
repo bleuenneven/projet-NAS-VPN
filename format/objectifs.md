@@ -19,3 +19,10 @@ Chaque routeur a :
 - son hostname
 - une liste des appreils auxquels il est connecté avec chaque autre appareil sous forme de dictionnaire {"type":"Router"|"Switch"|..., "hostname":"le hostname", "interface":"nom de l'interface"}, interface peut être ommis
 - son AS number
+
+## Trucs en Plus 
+
+- RSVP 
+    - pas les réservations de capacité
+    - tunnel pour dévier du chemin le plus court
+    - tester avec des traceroute et regarder les messages PATH
