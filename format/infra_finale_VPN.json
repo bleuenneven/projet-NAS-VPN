@@ -11,7 +11,7 @@
                   {"client_id":123, "am_client":false, "accept_from":[345], "share_with":[345], "preferred_links":[["R6", "R12"]]}
                 ],
                 [300, "client", {"R4":"17.30.0.0/16", "R1":"17.31.0.0/16"},
-                  {"client_id":234, "am_client":false, "accept_from":[345], "share_with":[345]}
+                  {"client_id":234, "am_client":false, "accept_from":[345], "share_with":[345], "engineered_traffic":[["R21", "R1", "R7", "R8", "R9", "R6", "R3", "R4", "R22"]]}
                 ],
                 [400, "client", {"R6":"17.100.0.0/16"},
                   {"client_id":345, "am_client":false, "accept_from":[123, 234], "share_with":[123, 234]}

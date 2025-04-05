@@ -28,6 +28,7 @@ def get_ospf_config_string(AS, router):
     ospf_config_string += f" router-id {router.router_id}.{router.router_id}.{router.router_id}.{router.router_id}\n"# network {router.loopback_address}/128 area 0\n"
     for passive in router.passive_interfaces:
         ospf_config_string += f" passive-interface {passive}\n"
+    ospf_config_string += f" mpls traffic-eng router-id Loopback1\n mpls traffic-eng area 0\n"
     return ospf_config_string
 
 
@@ -81,7 +82,10 @@ def get_final_config_string(AS: AS, router: "Router", mode: str, all_as:dict[int
 					if r1 == router.hostname:
 						route_maps += data["route_map_pe_in"]
 						community_lists += data["community_list"]
-
+	paths = ""
+	for (path_str, tunnel_interface) in router.tunnel_configs:
+		total_interface_string += tunnel_interface + "!\n"
+		paths += path_str + "!\n"
 	route_maps += AS.global_route_map_out
 	return f"""!
 !
@@ -114,7 +118,7 @@ ip cef
 !
 multilink bundle-name authenticated
 !
-!
+mpls traffic-eng tunnels
 !
 !
 !
@@ -130,7 +134,7 @@ no cdp log mismatch duplex
 ip bgp-community new-format
 !
 !
-!
+{paths}
 !
 !
 {community_lists}
@@ -140,8 +144,9 @@ ip bgp-community new-format
 !
 !
 interface {STANDARD_LOOPBACK_INTERFACE}
- no ip address
  ip address {router.loopback_address} 255.255.255.255
+ mpls traffic-eng tunnels
+ ip rsvp bandwidth
  {router.internal_routing_loopback_config}
 !
 !
@@ -221,8 +226,12 @@ def get_all_telnet_commands(AS:AS, router:"Router", all_as:dict[int, AS]):
 	interface_configs = []
 	for interface in router.config_str_per_link.values():
 		interface_configs += interface.split("\n")
-	final = (["config t", "ip bgp-community new-format",
-	          "ip unicast-routing"] + community_list_setup + route_maps_setup + internal_routing + loopback_setup + interface_configs + bgp_setup)
+	paths = []
+	for (path_str, tunnel_interface) in router.tunnel_configs:
+		interface_configs += tunnel_interface.split("\n") + ["exit"]
+		paths += path_str.split("\n") + ["exit"]
+	final = (["config t", "ip bgp-community new-format", "mpls traffic-eng tunnels",
+	          "ip unicast-routing"] + community_list_setup + route_maps_setup + paths + internal_routing + loopback_setup + interface_configs + bgp_setup)
 	for commande in list(final):
 		if "!" in commande:
 			final.remove(commande)

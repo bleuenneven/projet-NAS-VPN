@@ -37,6 +37,7 @@ class AS:
         self.hashset_pe_routers = set()
         vpn_datas_per_client = {}
         self.vpn_te_route_maps = {}
+        self.global_allocated_tunnels = {}
         for target in connected_AS:
             if len(target) == 4 and not target[3]["am_client"]:
                 vpn_datas_per_client[target[3]["client_id"]] = target[3]
@@ -87,6 +88,19 @@ class AS:
                         self.vpn_te_route_maps[(their_router, my_router)] = {
                             "route_map_ce_out":f"route-map VPN{client_id}-P{allocated}-RM permit 10\n set community 200:{allocated}\n!\n",
                             "RM_name":f"VPN{client_id}-P{allocated}-RM"
+                        }
+                    for reserved in vpn_data.get("engineered_traffic", []):
+                        first_pe, last_pe = reserved[1], reserved[-2]
+                        ce = reserved[0]
+                        tunnel_number = len(self.global_allocated_tunnels) + 1
+                        internal_route = []
+                        for i in range(1, len(reserved) - 1):
+                            internal_route.append(reserved[i])
+                        self.global_allocated_tunnels[(first_pe, ce)] = {
+                            "route":reserved,
+                            "tunnel_number":tunnel_number,
+                            "pre_end":last_pe,
+                            "internal_route":internal_route
                         }
 
                     for accept in vpn_data["accept_from"]:
