@@ -34,6 +34,8 @@ class Router:
         self.is_pe = False
         self.vpn_neighbors = set()
         self.tunnel_configs = []
+        self.extra_loopbacks = {}
+        self.enforced_loopbacks = {}
 
     def __str__(self):
         return f"hostname:{self.hostname}\n links:{self.links}\n as_number:{self.AS_number}"
@@ -277,7 +279,6 @@ class Router:
                 penultimate = data["internal_route"][-2]
                 for r in data["internal_route"]:
                     next_router = data["internal_route"][route_index if route_index < len(data["internal_route"]) else -1]
-                    print(last_router, r, next_router)
                     if last_router == r:
                         pass
                         #explicit_path_str += f" index {indice} next-address loose {all_routers[r].loopback_address}\n"
@@ -293,11 +294,43 @@ class Router:
                     indice += 1
                     route_index += 1
                     last_router = r
+                target_address = all_routers[data["internal_route"][-1]].set_and_get_new_enforced_loopback(autonomous_systems, all_routers, mode, data["route"][-1])
                 local_tunnel_number = len(self.tunnel_configs) + 1
-                interface_tunnel = f"interface Tunnel{local_tunnel_number}\n ip unnumbered Loopback1\n tunnel mode mpls traffic-eng\n tunnel source Loopback1\n tunnel destination {all_routers[data["pre_end"]].ip_per_link[penultimate]}\n tunnel mpls traffic-eng autoroute announce\n tunnel mpls traffic-eng priority 1 1\n tunnel mpls traffic-eng bandwidth 5000\n tunnel mpls traffic-eng path-option 10 explicit name path{data["tunnel_number"]}\n tunnel mpls traffic-eng record-route\n"
-                self.tunnel_configs.append((explicit_path_str, interface_tunnel))
+                interface_tunnel = f"interface Tunnel{local_tunnel_number}\n ip unnumbered Loopback1\n tunnel mode mpls traffic-eng\n tunnel source Loopback1\n tunnel destination {all_routers[data["internal_route"][-1]].ip_per_link[penultimate]}\n tunnel mpls traffic-eng autoroute announce\n tunnel mpls traffic-eng priority 1 1\n tunnel mpls traffic-eng bandwidth 5000\n tunnel mpls traffic-eng path-option 10 explicit name path{data["tunnel_number"]}\n tunnel mpls traffic-eng record-route\n"
+                extra_route = f"ip route {target_address} 255.255.255.255 Tunnel{local_tunnel_number}\n"
+                self.tunnel_configs.append((explicit_path_str, interface_tunnel, extra_route))
 
-
+    def set_and_get_new_enforced_loopback(self, autonomous_systems: dict[int, AS], all_routers: dict[str, "Router"], mode: str, client:str):
+        """
+        génère et renvoie l'addresse d'une nouvelle loopback rajoutée comme next hop à la configuration de la VRF du client correspondant
+        """
+        if self.extra_loopbacks.get(client, False) == False:
+                
+            my_as = autonomous_systems[self.AS_number]
+            router_id = my_as.global_router_counter.get_next_router_id()
+            extra_loopback_address = my_as.loopback_prefix.get_ip_address_with_router_id(router_id)
+            if my_as.internal_routing == "OSPF":
+                if mode == "cfg":
+                    internal_routing_loopback_config = f"ip ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT} area 0\n!\n"
+                elif mode == "telnet":
+                    # todo : telnet command
+                    internal_routing_loopback_config = f"ip ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT} area 0\n"
+            elif my_as.internal_routing == "RIP":
+                if mode == "cfg":
+                    internal_routing_loopback_config = f"ip rip {NOM_PROCESSUS_IGP_PAR_DEFAUT} enable\n!\n"
+                elif mode == "telnet":
+                    # todo : telnet command
+                    internal_routing_loopback_config = f"ip rip {NOM_PROCESSUS_IGP_PAR_DEFAUT} enable\n"
+            self.extra_loopbacks[client] = {
+                "interface_name":f"Loopback{len(self.extra_loopbacks) + 2}",
+                "interface_data":f"interface Loopback{len(self.extra_loopbacks) + 2}\n ip address {extra_loopback_address} 255.255.255.255\n mpls traffic-eng tunnels\n ip rsvp bandwidth\n{internal_routing_loopback_config}",
+                "address":extra_loopback_address,
+                "next_hop":f"bgp next-hop Loopback{len(self.extra_loopbacks) + 2}\n",
+                "bgp_extra":f"  network {extra_loopback_address} mask 255.255.255.255\n"
+            }
+            return extra_loopback_address
+        else:
+            return self.extra_loopbacks[client]["address"]
 
     def set_bgp_config_data(self, autonomous_systems: dict[int, AS], all_routers: dict[str, "Router"], mode: str):
         """
@@ -350,6 +383,8 @@ class Router:
                     self.used_route_maps.add(remote_as)
 
             config_ipv4_af += f"network {self.loopback_address} mask 255.255.255.255\nexit\n"
+            for data in self.extra_loopbacks.values():
+                config_ipv4_af += data["bgp_extra"] + "exit\n"
             config_vpnv4_af += "exit\n"
             self.config_bgp += config_neighbors_ibgp
             self.config_bgp += config_neighbors_ebgp
@@ -399,7 +434,10 @@ class Router:
                             config_ipv4_af += f"  neighbor {remote_ip} route-map {autonomous_systems[remote_as].vpn_te_route_maps[(self.hostname, voisin_ebgp)]["RM_name"]} out\n"
                     
                     self.used_route_maps.add(remote_as)
+            
             config_ipv4_af += f"  network {self.loopback_address} mask 255.255.255.255\n"
+            for data in self.extra_loopbacks.values():
+                config_ipv4_af += data["bgp_extra"]
             vpn_address_families = ""
             for voisin_vpn in list(self.vpn_neighbors):
                 remote_ip = all_routers[voisin_vpn].ip_per_link[self.hostname]

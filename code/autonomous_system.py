@@ -108,7 +108,7 @@ class AS:
                             imports += f" route-target import 100:{accept}\n"
                     vrf_defs = []
                     for i in range(len(list_of_transport)):
-                        vrf_defs.append(f"vrf definition Client_{client_id}\n rd 100:{self.route_distinguishers}\n route-target export 100:{client_id}\n{imports} route-target import 100:{client_id}\n !\n address-family ipv4\n exit-address-family\n!\n")
+                        vrf_defs.append(f"vrf definition Client_{client_id}\n rd 100:{self.route_distinguishers}\n route-target export 100:{client_id}\n{imports} route-target import 100:{client_id}\n !\n address-family ipv4REPLACEME\n exit-address-family\n!\n")
                         self.route_distinguishers += 1
                     self.community_data[as_num] = {
                         "VPN":True,

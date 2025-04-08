@@ -8,7 +8,7 @@
             "internal_routing":"OSPF",
             "connected_AS":[
                 [200, "client", {"R4":"17.200.0.0/16", "R1":"17.201.0.0/16", "R6":"17.203.0.0/16"},
-                  {"client_id":123, "am_client":false, "accept_from":[345], "share_with":[345], "preferred_links":[["R6", "R12"]]}
+                  {"client_id":123, "am_client":false, "accept_from":[345], "share_with":[345], "preferred_links":[["R4", "R12"]], "engineered_traffic":[["R11", "R1", "R2", "R5", "R3", "R4", "R12"]]}
                 ],
                 [300, "client", {"R4":"17.30.0.0/16", "R1":"17.31.0.0/16"},
                   {"client_id":234, "am_client":false, "accept_from":[345], "share_with":[345], "engineered_traffic":[["R21", "R1", "R7", "R8", "R9", "R6", "R3", "R4", "R22"]]}

@@ -63,13 +63,21 @@ def get_final_config_string(AS: AS, router: "Router", mode: str, all_as:dict[int
 	total_interface_string = ""
 	for config_string in router.config_str_per_link.values():
 		total_interface_string += config_string
+	for config_string in router.extra_loopbacks.values():
+		total_interface_string += config_string["interface_data"]
 	route_maps = ""
 	community_lists = AS.full_community_lists
 	for autonomous in router.used_route_maps:
 		if AS.community_data[autonomous].get("route_map_in", False) != False:
 			route_maps += AS.community_data[autonomous]["route_map_in"]
 		else:
-			route_maps += AS.community_data[autonomous].get("vrf_def", [""]).pop()
+			vrf_def:str = AS.community_data[autonomous].get("vrf_def", [""]).pop()
+			for (ce, data) in router.extra_loopbacks.items():
+				if ce in all_as[autonomous].routers:
+					vrf_def = vrf_def.replace("REPLACEME", "\n" + data["next_hop"])
+			
+			vrf_def = vrf_def.replace("REPLACEME", "")
+			route_maps += vrf_def
 			route_maps += AS.community_data[autonomous].get("vpn_route_map", "")
 
 			if all_as[autonomous].vpn_te_route_maps != {}:
@@ -83,9 +91,11 @@ def get_final_config_string(AS: AS, router: "Router", mode: str, all_as:dict[int
 						route_maps += data["route_map_pe_in"]
 						community_lists += data["community_list"]
 	paths = ""
-	for (path_str, tunnel_interface) in router.tunnel_configs:
+	routes = ""
+	for (path_str, tunnel_interface, route) in router.tunnel_configs:
 		total_interface_string += tunnel_interface + "!\n"
 		paths += path_str + "!\n"
+		routes += route + "!\n"
 	route_maps += AS.global_route_map_out
 	return f"""!
 !
@@ -158,7 +168,7 @@ ip forward-protocol nd
 !
 no ip http server
 no ip http secure-server
-!
+{routes}
 !
 {internal_routing}
 !
@@ -226,6 +236,8 @@ def get_all_telnet_commands(AS:AS, router:"Router", all_as:dict[int, AS]):
 	interface_configs = []
 	for interface in router.config_str_per_link.values():
 		interface_configs += interface.split("\n")
+	for config_string in router.extra_loopbacks.values():
+		total_interface_string += config_string["interface_data"].split("\n") + ["exit"]
 	paths = []
 	for (path_str, tunnel_interface) in router.tunnel_configs:
 		interface_configs += tunnel_interface.split("\n") + ["exit"]

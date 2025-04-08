@@ -27,8 +27,6 @@ repo du code du groupe 14 du projet GNS3 en 3TC
                         - le premier et le dernier élément doivent être des CE du client
                         - le chemin doit être explicite de bout en bout, aucun routeur ne doit manquer
                         - l'avant dernier et le deuxième élément doivent être des PE du provider
-                        - le tunnel n'est PAS spécifique à la VRF correspondant au client, seulement au PE1->PE2, donc un seul tunnel allant de tout PE-A à PE-B peut exister
-                            - REMARQUE : pour empêcher ce problème, il faudrait avoir une addresse de loopback par lien avec un client VPN sur chaque PE, changer le next-hop BGP dans la VRF, et utiliser ce loopback particulier comme source dans le tunnel RSVP
         - "loopback_prefix":le préfixe IPv4 voulu pour allouer les adresses loopback, **doit être unique**
 - "Les_routeurs" :
     - contient une liste de dictionnaires d'informations complets pour tous les routeurs :
