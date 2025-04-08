@@ -28,6 +28,7 @@ repo du code du groupe 14 du projet GNS3 en 3TC
                         - le chemin doit être explicite de bout en bout, aucun routeur ne doit manquer
                         - l'avant dernier et le deuxième élément doivent être des PE du provider
         - "loopback_prefix":le préfixe IPv4 voulu pour allouer les adresses loopback, **doit être unique**
+        - "route_reflectors": OPTIONNEL, liste de hostnames contenus dans "routers" qui doivent servir de Route Reflectors, si elle n'est pas présente, le iBGP sera en full-mesh
 - "Les_routeurs" :
     - contient une liste de dictionnaires d'informations complets pour tous les routeurs :
         - "hostname":le hostname du routeur, **doit être unique**
