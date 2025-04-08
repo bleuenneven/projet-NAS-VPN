@@ -382,9 +382,10 @@ class Router:
                             config_ipv4_af += f"neighbor {remote_ip} route-map {autonomous_systems[remote_as].vpn_te_route_maps[(self.hostname, voisin_ebgp)]["RM_name"]} out\n"
                     self.used_route_maps.add(remote_as)
 
-            config_ipv4_af += f"network {self.loopback_address} mask 255.255.255.255\nexit\n"
+            config_ipv4_af += f"network {self.loopback_address} mask 255.255.255.255\n"
             for data in self.extra_loopbacks.values():
-                config_ipv4_af += data["bgp_extra"] + "exit\n"
+                config_ipv4_af += data["bgp_extra"]
+            config_ipv4_af += "exit\n"
             config_vpnv4_af += "exit\n"
             self.config_bgp += config_neighbors_ibgp
             self.config_bgp += config_neighbors_ebgp
