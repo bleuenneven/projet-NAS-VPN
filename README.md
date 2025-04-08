@@ -50,6 +50,8 @@ repo du code du groupe 14 du projet GNS3 en 3TC
 
 Remarque : Comme seules les loopback sont advertised en BGP, pour ping entre routeurs il faut faire `ping {cible} source lo1` (le `source lo1` met comme adresse source l'adresse de loopback du routeur qui ping, ce qui permet aux ICMP echo reply de revenir)
 
+Remarque 2 : le fichier d'intention complet pour la démo NAS-VPN est `format/infra_finale_VPN.json`
+
 
 ## Fonctionnalités supportées (Telles que listées sur le document du sujet)
 - Network Automation
@@ -60,7 +62,7 @@ Remarque : Comme seules les loopback sont advertised en BGP, pour ping entre rou
     - Route Reflectors : oui, choix de full-mesh ou RR en fonction de la présence ou non de route-reflectors dans le fichier d'intention
     - Traffic Engineering
         - Choix de lien(s) d'entrée : oui
-        - tunnels RSVP-TE : oui, si chaque CE sont les seuls routeurs VPN sur leurs PE respectifs
+        - tunnels RSVP-TE : oui
     - Policies
         - BGP Policies : oui
         - OSPF Metric Optimization : oui
