@@ -28,6 +28,7 @@ def get_ospf_config_string(AS, router):
     ospf_config_string += f" router-id {router.router_id}.{router.router_id}.{router.router_id}.{router.router_id}\n"# network {router.loopback_address}/128 area 0\n"
     for passive in router.passive_interfaces:
         ospf_config_string += f" passive-interface {passive}\n"
+    ospf_config_string += f" mpls traffic-eng router-id Loopback1\n mpls traffic-eng area 0\n"
     return ospf_config_string
 
 
@@ -62,13 +63,21 @@ def get_final_config_string(AS: AS, router: "Router", mode: str, all_as:dict[int
 	total_interface_string = ""
 	for config_string in router.config_str_per_link.values():
 		total_interface_string += config_string
+	for config_string in router.extra_loopbacks.values():
+		total_interface_string += config_string["interface_data"]
 	route_maps = ""
 	community_lists = AS.full_community_lists
 	for autonomous in router.used_route_maps:
 		if AS.community_data[autonomous].get("route_map_in", False) != False:
 			route_maps += AS.community_data[autonomous]["route_map_in"]
 		else:
-			route_maps += AS.community_data[autonomous].get("vrf_def", [""]).pop()
+			vrf_def:str = AS.community_data[autonomous].get("vrf_def", [""]).pop()
+			for (ce, data) in router.extra_loopbacks.items():
+				if ce in all_as[autonomous].routers:
+					vrf_def = vrf_def.replace("REPLACEME", "\n" + data["next_hop"])
+			
+			vrf_def = vrf_def.replace("REPLACEME", "")
+			route_maps += vrf_def
 			route_maps += AS.community_data[autonomous].get("vpn_route_map", "")
 
 			if all_as[autonomous].vpn_te_route_maps != {}:
@@ -81,7 +90,12 @@ def get_final_config_string(AS: AS, router: "Router", mode: str, all_as:dict[int
 					if r1 == router.hostname:
 						route_maps += data["route_map_pe_in"]
 						community_lists += data["community_list"]
-
+	paths = ""
+	routes = ""
+	for (path_str, tunnel_interface, route) in router.tunnel_configs:
+		total_interface_string += tunnel_interface + "!\n"
+		paths += path_str + "!\n"
+		routes += route + "!\n"
 	route_maps += AS.global_route_map_out
 	return f"""!
 !
@@ -114,7 +128,7 @@ ip cef
 !
 multilink bundle-name authenticated
 !
-!
+mpls traffic-eng tunnels
 !
 !
 !
@@ -130,7 +144,7 @@ no cdp log mismatch duplex
 ip bgp-community new-format
 !
 !
-!
+{paths}
 !
 !
 {community_lists}
@@ -140,8 +154,9 @@ ip bgp-community new-format
 !
 !
 interface {STANDARD_LOOPBACK_INTERFACE}
- no ip address
  ip address {router.loopback_address} 255.255.255.255
+ mpls traffic-eng tunnels
+ ip rsvp bandwidth
  {router.internal_routing_loopback_config}
 !
 !
@@ -153,7 +168,7 @@ ip forward-protocol nd
 !
 no ip http server
 no ip http secure-server
-!
+{routes}
 !
 {internal_routing}
 !
@@ -205,7 +220,12 @@ def get_all_telnet_commands(AS:AS, router:"Router", all_as:dict[int, AS]):
 			route_maps_setup += AS.community_data[autonomous]["route_map_in"].split("\n")
 			route_maps_setup += ["exit"]
 		else:
-			route_maps_setup += AS.community_data[autonomous].get("vrf_def", [""]).pop().split("\n")
+			vrf_def:str = AS.community_data[autonomous].get("vrf_def", [""]).pop()
+			for (ce, data) in router.extra_loopbacks.items():
+				if ce in all_as[autonomous].routers:
+					vrf_def = vrf_def.replace("REPLACEME", "\n" + data["next_hop"])
+			vrf_def = vrf_def.replace("REPLACEME", "")
+			route_maps_setup += vrf_def.split("\n")
 			route_maps_setup += AS.community_data[autonomous].get("vpn_route_map", "").split("\n")
 			if all_as[autonomous].vpn_te_route_maps != {}:
 				for ((r1, r2),data) in all_as[autonomous].vpn_te_route_maps.items():
@@ -221,8 +241,16 @@ def get_all_telnet_commands(AS:AS, router:"Router", all_as:dict[int, AS]):
 	interface_configs = []
 	for interface in router.config_str_per_link.values():
 		interface_configs += interface.split("\n")
-	final = (["config t", "ip bgp-community new-format",
-	          "ip unicast-routing"] + community_list_setup + route_maps_setup + internal_routing + loopback_setup + interface_configs + bgp_setup)
+	for config_string in router.extra_loopbacks.values():
+		interface_configs += config_string["interface_data"].split("\n") + ["exit"]
+	paths = []
+	routes = []
+	for (path_str, tunnel_interface, route) in router.tunnel_configs:
+		interface_configs += tunnel_interface.split("\n") + ["exit"]
+		paths += path_str.split("\n") + ["exit"]
+		routes += route.split("\n")
+	final = (["config t", "ip bgp-community new-format", "mpls traffic-eng tunnels",
+	          "ip unicast-routing"] + community_list_setup + route_maps_setup + paths + internal_routing + loopback_setup + interface_configs + [f"router ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT}", "mpls traffic-eng router-id Loopback1", "exit"] + routes + bgp_setup)
 	for commande in list(final):
 		if "!" in commande:
 			final.remove(commande)

@@ -5,7 +5,7 @@ repo du code du projet VPN de NAS en 3TC du groupe constitué de Midoli CAILLON-
 - dictionnaire JSON avec 2 éléments top-level :
 - "Les_AS" :
     - contient une liste de dictionnaires d'informations pour chaque AS :
-        - "ipv6_prefix":le préfixe IPv6 du réseau, **doit être unique**
+        - "ipv4_prefix":le préfixe IPv4 du réseau, **doit être unique**
         - "AS_number":le AS number, **doit être unique**
         - "routers":la liste des hostname des routeurs appartenant à l'AS (**attention, ne pas mettre 1 routeur dans plusieurs AS !**)
         - "internal_routing":le nom du protocole de routage interne, seuls "RIP" et "OSPF" sont corrects
@@ -13,9 +13,22 @@ repo du code du projet VPN de NAS en 3TC du groupe constitué de Midoli CAILLON-
             - le numéro d'AS spécifié
             - la relation avec celui-ci ("peer", "provider" ou "client") (**doit être logique des 2 côtés, si peer d'un côté, peer de l'autre, si provider d'un côté, client de l'autre et inversement**)
             - un dictionnaire des préfixes ipv6 de liens à utiliser pour les points de connection avec cet AS partant d'un routeur donné (si on utilise le préfixe 2001:200:401::64 pour le lien entre l'AS 111 et 110 partant de R5 du côté 111, ce dictionnaire aura une entrée "R5":"2001:200:401::/64", , **doivent être uniques par lien entre AS**)
-            - RAJOUT DE NAS VPN : si il existe une relation de VPN entre les 2 AS, une liste de plusieurs éléments (des 2 côtés) :
-                - identifiant de client (entier positif)
-        - "loopback_prefix":le préfixe IPv6 voulu pour allouer les adresses loopback, **doit être unique**
+            - RAJOUT DE NAS VPN : si il existe une relation de VPN entre les 2 AS, un dictionnaire de données VPN (des 2 côtés) :
+                - du côté client :
+                    - "client_id" : un numéro de client unique au niveau de l'AS, peut avoir des numéros de clients différents dans des AS différents
+                    - "am_client" : booléen true ici pour spécifier qu'on est le client (nécessaire pour différencier quel côté est le client et lequel est le provider VPN)
+                - du côté serveur :
+                    - "client_id" : un numéro de client unique au niveau de l'AS
+                    - "am_client" : booléen false ici pour spécifier qu'on est le client
+                    - "accept_from" : OPTIONNEL, spécifie de quels autres clients VPN de cet AS ce client accepte de recevoir des routes en VPN sharing, doit exister de pair avec "share_with"
+                    - "share_with" : OPTIONNEL, spécifie avec quels autres clients VPN de cet AS ce client partage des routes, doit exister de pair avec "accept_from"
+                    - "preferred_links" : OPTIONNEL, spécifie des liens (PE, CE) que le client préfère, si un site a plusieurs lien vers le réseau du provider, ceux dans preferred_links seront utilisés en priorité (jusqu'à ce qu'ils tombent)
+                    - "engineered_traffic" : OPTIONNEL, spécifie des séquences de routeurs que le client veut avoir comme tunnel unidirectionnel, ATTENTION :
+                        - le premier et le dernier élément doivent être des CE du client
+                        - le chemin doit être explicite de bout en bout, aucun routeur ne doit manquer
+                        - l'avant dernier et le deuxième élément doivent être des PE du provider
+        - "loopback_prefix":le préfixe IPv4 voulu pour allouer les adresses loopback, **doit être unique**
+        - "route_reflectors": OPTIONNEL, liste de hostnames contenus dans "routers" qui doivent servir de Route Reflectors, si elle n'est pas présente, le iBGP sera en full-mesh
 - "Les_routeurs" :
     - contient une liste de dictionnaires d'informations complets pour tous les routeurs :
         - "hostname":le hostname du routeur, **doit être unique**
@@ -38,12 +51,19 @@ repo du code du projet VPN de NAS en 3TC du groupe constitué de Midoli CAILLON-
 
 Remarque : Comme seules les loopback sont advertised en BGP, pour ping entre routeurs il faut faire `ping {cible} source lo1` (le `source lo1` met comme adresse source l'adresse de loopback du routeur qui ping, ce qui permet aux ICMP echo reply de revenir)
 
+Remarque 2 : le fichier d'intention complet pour la démo NAS-VPN est `format/infra_finale_VPN.json`
+
 
 ## Fonctionnalités supportées (Telles que listées sur le document du sujet)
 - Network Automation
     - Architecture : oui
     - Addressing : Automated
     - Protocols : oui
+    - VPN sharing : oui
+    - Route Reflectors : oui, choix de full-mesh ou RR en fonction de la présence ou non de route-reflectors dans le fichier d'intention
+    - Traffic Engineering
+        - Choix de lien(s) d'entrée : oui
+        - tunnels RSVP-TE : oui
     - Policies
         - BGP Policies : oui
         - OSPF Metric Optimization : oui
