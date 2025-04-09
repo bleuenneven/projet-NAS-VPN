@@ -1,5 +1,5 @@
-# projet-GNS3
-repo du code du groupe 14 du projet GNS3 en 3TC
+# projet-NAS
+repo du code du projet VPN de NAS en 3TC du groupe constitué de Midoli CAILLON-SHIRAI, Sofia EL KHALIFI, Bleuenn EVEN, Jana MAHRAN et Pierre WEISSE
 
 ## Format du fichier d'intention
 - dictionnaire JSON avec 2 éléments top-level :
