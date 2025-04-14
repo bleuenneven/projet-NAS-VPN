@@ -28,7 +28,8 @@ def get_ospf_config_string(AS, router):
     ospf_config_string += f" router-id {router.router_id}.{router.router_id}.{router.router_id}.{router.router_id}\n"# network {router.loopback_address}/128 area 0\n"
     for passive in router.passive_interfaces:
         ospf_config_string += f" passive-interface {passive}\n"
-    ospf_config_string += f" mpls traffic-eng router-id Loopback1\n mpls traffic-eng area 0\n"
+    if not AS.is_vpn_client:
+        ospf_config_string += f" mpls traffic-eng router-id Loopback1\n mpls traffic-eng area 0\n"
     return ospf_config_string
 
 
@@ -128,7 +129,7 @@ ip cef
 !
 multilink bundle-name authenticated
 !
-mpls traffic-eng tunnels
+{"" if AS.is_vpn_client else "mpls traffic-eng tunnels"}
 !
 !
 !
@@ -155,8 +156,6 @@ ip bgp-community new-format
 !
 interface {STANDARD_LOOPBACK_INTERFACE}
  ip address {router.loopback_address} 255.255.255.255
- mpls traffic-eng tunnels
- ip rsvp bandwidth
  {router.internal_routing_loopback_config}
 !
 !
@@ -249,8 +248,8 @@ def get_all_telnet_commands(AS:AS, router:"Router", all_as:dict[int, AS]):
 		interface_configs += tunnel_interface.split("\n") + ["exit"]
 		paths += path_str.split("\n") + ["exit"]
 		routes += route.split("\n")
-	final = (["config t", "ip bgp-community new-format", "mpls traffic-eng tunnels",
-	          "ip unicast-routing"] + community_list_setup + route_maps_setup + paths + internal_routing + loopback_setup + interface_configs + [f"router ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT}", "mpls traffic-eng router-id Loopback1", "exit"] + routes + bgp_setup)
+	final = (["config t", "ip bgp-community new-format", "mpls traffic-eng tunnels" if not AS.is_vpn_client else "",
+	          "ip unicast-routing"] + community_list_setup + route_maps_setup + paths + internal_routing + loopback_setup + interface_configs + ([f"router ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT}", "mpls traffic-eng router-id Loopback1", "exit"] if not AS.is_vpn_client else []) + routes + bgp_setup)
 	for commande in list(final):
 		if "!" in commande:
 			final.remove(commande)

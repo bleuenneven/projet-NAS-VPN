@@ -28,7 +28,7 @@
             "routers":["R11", "R12", "R13"],
             "internal_routing":"OSPF",
             "connected_AS":[
-                [100, "provider", {"R11":"17.200.0.0/16", "R12":"17.201.0.0/16", "R13":"17.202.0.0/16"}, {"client_id":123, "am_client":true}]
+                [100, "provider", {"R11":"17.200.0.0/16", "R12":"17.201.0.0/16"}, {"client_id":123, "am_client":true}]
             ],
             "loopback_prefix":"111.0.0.0/8"
         },
@@ -115,7 +115,7 @@
         },
         {
             "hostname":"R4",
-            "links":[{"type":"Router", "hostname":"R3"}, {"type":"Router", "hostname":"R12"}, {"type":"Router", "hostname":"R22"}, {"type":"Router", "hostname":"R13"}],
+            "links":[{"type":"Router", "hostname":"R3"}, {"type":"Router", "hostname":"R12"}, {"type":"Router", "hostname":"R22"}],
             "AS_number":100,
             "position": {
               "x": -142,
@@ -187,7 +187,7 @@
         },
         {
             "hostname":"R13",
-            "links":[{"type":"Router", "hostname":"R12"}, {"type":"Router", "hostname":"R4"}],
+            "links":[{"type":"Router", "hostname":"R12"}],
             "AS_number":200,
             "position": {
               "x": -370,

@@ -170,15 +170,16 @@ class Router:
                                                                                     interface_for_link)
             if not self.subnetworks_per_link.get(link["hostname"], False):
                 if link["hostname"] in my_as.hashset_routers:
-                    self.subnetworks_per_link[link["hostname"]] = my_as.ipv4_prefix.next_subnetwork_with_n_routers(2)
+                    self.subnetworks_per_link[link["hostname"]] = my_as.ipv4_prefix.next_subnetwork_with_n_routers(4)
                     all_routers[link["hostname"]].subnetworks_per_link[self.hostname] = self.subnetworks_per_link[
                         link["hostname"]]
                 else:
                     self.passive_interfaces.add(self.interface_per_link[link["hostname"]])
                     picked_transport_interface = SubNetwork(
-                        my_as.connected_AS_dict[all_routers[link["hostname"]].AS_number][1][self.hostname], 2)
+                        my_as.connected_AS_dict[all_routers[link["hostname"]].AS_number][1][self.hostname], 4)
                     self.subnetworks_per_link[link["hostname"]] = picked_transport_interface
                     all_routers[link["hostname"]].subnetworks_per_link[self.hostname] = picked_transport_interface
+
             elif link["hostname"] not in my_as.hashset_routers:
                 self.passive_interfaces.add(self.interface_per_link[link["hostname"]])
             ip_address = self.subnetworks_per_link[link["hostname"]].get_ip_address_with_router_id(
@@ -190,7 +191,7 @@ class Router:
             if mode == "cfg":
                 extra_config = "\n!\n"
                 mpls_extra = ""
-                if self.AS_number == all_routers[link["hostname"]].AS_number:
+                if self.AS_number == all_routers[link["hostname"]].AS_number and not my_as.is_vpn_client:
                     mpls_extra = " mpls ip\n  mpls traffic-eng tunnels\n  ip rsvp bandwidth\n"
                 if my_as.internal_routing == "OSPF":
                     if not link.get("ospf_cost", False):
@@ -231,7 +232,7 @@ class Router:
                         extra_config = f"vrf forwarding {my_as.community_data[all_routers[link["hostname"]].AS_number]["nom_vrf"]}\n ip rip {NOM_PROCESSUS_IGP_PAR_DEFAUT} enable\n"
                     else:
                         extra_config = f"ip rip {NOM_PROCESSUS_IGP_PAR_DEFAUT} enable\n"
-                if self.AS_number == all_routers[link["hostname"]].AS_number:
+                if self.AS_number == all_routers[link["hostname"]].AS_number and not my_as.is_vpn_client:
                     extra_config += "mpls ip\n mpls traffic-eng tunnels\n ip rsvp bandwidth\n"
                 self.config_str_per_link[link[
                     "hostname"]] = f"interface {self.interface_per_link[link["hostname"]]}\n {extra_config} no shutdown\n mpls ip\n ip address {str(ip_address)} {self.subnetworks_per_link[link["hostname"]].get_subnet_mask()}\n exit\n"
@@ -249,18 +250,19 @@ class Router:
         router_id = my_as.global_router_counter.get_next_router_id()
         self.router_id = router_id
         self.loopback_address = my_as.loopback_prefix.get_ip_address_with_router_id(router_id)
+        mpls_extra = "mpls traffic-eng tunnels\nip rsvp bandwidth\n" if not my_as.is_vpn_client else ""
         if my_as.internal_routing == "OSPF":
             if mode == "cfg":
-                self.internal_routing_loopback_config = f"ip ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT} area 0\n!\n"
+                self.internal_routing_loopback_config = f"ip ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT} area 0\n{mpls_extra}!\n"
             elif mode == "telnet":
                 # todo : telnet command
-                self.internal_routing_loopback_config = f"interface {STANDARD_LOOPBACK_INTERFACE}\nip address {self.loopback_address} 255.255.255.255\nip ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT} area 0\nmpls traffic-eng tunnels\nip rsvp bandwidth\n"
+                self.internal_routing_loopback_config = f"interface {STANDARD_LOOPBACK_INTERFACE}\nip address {self.loopback_address} 255.255.255.255\nip ospf {NOM_PROCESSUS_IGP_PAR_DEFAUT} area 0\n{mpls_extra}"
         elif my_as.internal_routing == "RIP":
             if mode == "cfg":
-                self.internal_routing_loopback_config = f"ip rip {NOM_PROCESSUS_IGP_PAR_DEFAUT} enable\n!\n"
+                self.internal_routing_loopback_config = f"ip rip {NOM_PROCESSUS_IGP_PAR_DEFAUT} enable\n{mpls_extra}!\n"
             elif mode == "telnet":
                 # todo : telnet command
-                self.internal_routing_loopback_config = f"interface {STANDARD_LOOPBACK_INTERFACE}\nip address {self.loopback_address} 255.255.255.255\nip rip {NOM_PROCESSUS_IGP_PAR_DEFAUT} enable\nmpls traffic-eng tunnels\nip rsvp bandwidth\n"
+                self.internal_routing_loopback_config = f"interface {STANDARD_LOOPBACK_INTERFACE}\nip address {self.loopback_address} 255.255.255.255\nip rip {NOM_PROCESSUS_IGP_PAR_DEFAUT} enable\n{mpls_extra}"
 
     def set_tunnel_config_data(self, autonomous_systems:dict[int, AS], all_routers: dict[str, "Router"], mode: str):
         """
@@ -390,7 +392,8 @@ class Router:
             self.config_bgp += config_neighbors_ibgp
             self.config_bgp += config_neighbors_ebgp
             self.config_bgp += config_ipv4_af
-            self.config_bgp += config_vpnv4_af
+            if not my_as.is_vpn_client:
+                self.config_bgp += config_vpnv4_af
             vpn_address_families = ""
             for voisin_vpn in list(self.vpn_neighbors):
                 remote_ip = all_routers[voisin_vpn].ip_per_link[self.hostname]
@@ -437,6 +440,12 @@ class Router:
                     self.used_route_maps.add(remote_as)
             
             config_ipv4_af += f"  network {self.loopback_address} mask 255.255.255.255\n"
+
+            if not my_as.is_vpn_client:
+                full_vpnv4_config = f" address-family vpnv4\n{config_vpnv4_af}\n exit-address-family\n"
+            else:
+                full_vpnv4_config = ""
+            
             for data in self.extra_loopbacks.values():
                 config_ipv4_af += data["bgp_extra"]
             vpn_address_families = ""
@@ -454,9 +463,7 @@ router bgp {self.AS_number}
  bgp router-id {self.router_id}.{self.router_id}.{self.router_id}.{self.router_id}
  bgp log-neighbor-changes
 {config_neighbors_ibgp}{config_neighbors_ebgp}
- address-family vpnv4
-{config_vpnv4_af}
- exit-address-family
+{full_vpnv4_config}
 !
  address-family ipv4
 {config_ipv4_af}

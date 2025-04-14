@@ -38,6 +38,7 @@ class AS:
         vpn_datas_per_client = {}
         self.vpn_te_route_maps = {}
         self.global_allocated_tunnels = {}
+        self.is_vpn_client = False
         for target in connected_AS:
             if len(target) == 4 and not target[3]["am_client"]:
                 vpn_datas_per_client[target[3]["client_id"]] = target[3]
@@ -66,6 +67,7 @@ class AS:
             else:
                 (as_num, state, list_of_transport, vpn_data) = target
                 am_client = vpn_data["am_client"]
+                self.is_vpn_client = am_client or self.is_vpn_client
                 client_id = vpn_data["client_id"]
                 if am_client:
                     self.community_data[as_num] = {
